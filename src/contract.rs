@@ -123,7 +123,7 @@ pub fn execute_create_deal(deps: DepsMut, _env: Env, info: MessageInfo, msg: Cre
         }]};
     
     let messages = vec![creation_fee_msg,lock_funds_msg];
-    let response=Response::new().add_messages(messages).add_attribute("action", "create_deal");
+    let response=Response::new().add_messages(messages).add_attribute("action", "create_deal").add_attribute("deal_id",id.to_string());
     Ok(response)
 }
 
@@ -538,6 +538,9 @@ mod tests {
     };
     let msg = ExecuteMsg::CreateDeal(create_deal_msg);
     let res = execute(deps.as_mut(), mock_env(), info.clone(), msg.clone()).unwrap();
+
+    
+    println!("{:?}",res);
        // query deal
      let balance=check_balance(deps.as_ref(), "fee_", "uotc");
         let msg = QueryMsg::GetDeal { id: Uint64::new(1) };
