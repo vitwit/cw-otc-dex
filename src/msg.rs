@@ -90,12 +90,6 @@ pub struct WithdrawBidMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct AcceptBidMsg {
-    pub deal_id: u64,
-    pub bid_ids: Vec<u64>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ExecuteDealMsg {
     pub deal_id: u64,
 }
@@ -109,35 +103,4 @@ pub enum ExecuteMsg {
     PlaceBid(PlaceBidMsg),
     WithdrawBid(WithdrawBidMsg),
     ExecuteDeal(ExecuteDealMsg),
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CreateDealResponse {
-    pub deal_id: u64,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CancelDealResponse {
-    pub deal_id: u64,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct PlaceBidResponse {
-    pub bid_id: u64,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct WithdrawBidResponse {
-    pub bid_id: u64,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct AcceptBidResponse {
-    pub deal_id: u64,
-    pub accepted_bid_ids: Vec<u64>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct ExecuteDealResponse {
-    pub deal_id: u64,
 }

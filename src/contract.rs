@@ -81,32 +81,16 @@ pub fn execute(
     }
 }
 
-// Function to check the balance of an address for a given denom
-pub fn check_balance(deps: Deps, address: &str, denom: &str) -> StdResult<Uint128> {
-    let query_result = deps.querier.query_balance(address, denom);
-
-    // Handle the query result
-    match query_result {
-        Ok(balance) => Ok(balance.amount),
-        Err(err) => {
-            // Handle query error (e.g., address not found, denom not found, etc.)
-            Err(err)
-        }
-    }
-}
 // Entry points for the message implementations
 pub fn execute_create_deal(deps: DepsMut, _env: Env, info: MessageInfo, msg: CreateDealMsg) -> Result<Response,ContractError> {
-    // owner authentication
     let config = CONFIG.load(deps.storage)?;
-    
     if msg.start_block > msg.end_block{
         return Err(ContractError::InvalidDealCreation{});
     }
+    //creation of the deal 
     let deal = Deal {
         deal_creator: Addr::unchecked(msg.deal_creator),
-        /// min_cap is the token threshold amount to begin swaps
         min_cap: msg.min_cap,
-        /// total_bid keeps information on how much is the total bid for this deal.
         total_bid:msg.total_bid,
         deal_token_denom: msg.deal_token_denom.clone(),
         deal_token_amount:msg.deal_token_amount,
@@ -115,11 +99,13 @@ pub fn execute_create_deal(deps: DepsMut, _env: Env, info: MessageInfo, msg: Cre
         bid_token_denom: msg.bid_token_denom,
         min_price: msg.min_price,
     };
-    // increment id if exists, or return 1
+    //Generating deal_id from the deal sequence 
     let mut id = DEAL_SEQ.load(deps.storage)?;
     id+=1;
     DEAL_SEQ.save(deps.storage, &id)?;
     let res=DEALS.save(deps.storage, id, &deal);
+
+    //sending amount to the feecollector
     let creation_fee_msg = BankMsg::Send {
         to_address: config.fee_collector.to_string(),
         amount: vec![Coin {
@@ -127,7 +113,7 @@ pub fn execute_create_deal(deps: DepsMut, _env: Env, info: MessageInfo, msg: Cre
             amount: config.deal_creation_fee.into(),
         }],
     };
-    println!("contract address is {:?}",_env.contract.address.to_string());
+
     // msg for locking otc deposit in the contract
     let lock_funds_msg: BankMsg = BankMsg::Send{
         to_address: _env.contract.address.to_string(),
@@ -145,31 +131,32 @@ pub fn execute_create_deal(deps: DepsMut, _env: Env, info: MessageInfo, msg: Cre
 
 pub fn execute_cancel_deal(deps: DepsMut, _env: Env, info: MessageInfo, msg: CancelDealMsg) -> Result<Response,ContractError> {
     // Logic to retrieve and validate the deal
-    // ...
     let query_deal = DEALS.load(deps.storage, msg.deal_id);
     let _dealinfo=match query_deal{
     Ok(_dealinfo)=>_dealinfo,
-        Err(_err)=> return Err(ContractError::DealNotExisted {  }),
+        Err(_err)=> return Err(ContractError::DealNotExisted {}),
     };
     if _dealinfo.deal_creator!= info.sender {
           return Err(ContractError::InvalidDealCreator {});
     }
+
     let mut _messages = Vec::new();
+    //sending the dealtoken amount back to the dealcreator
     let deal_token_amount_msg: BankMsg = BankMsg::Send{
         to_address: _dealinfo.deal_creator.to_string(),
         amount: vec![Coin {
             denom:_dealinfo.deal_token_denom.to_string(),
             amount: _dealinfo.deal_token_amount,
      }]};
-     // Accumulate bidder amount messages
     _messages.push(deal_token_amount_msg);
+    //retrieval of bids from respective deal_id
     let bitstore_info_query=DEALSTORE.load(deps.storage,msg.deal_id);
     let bitstore_info = match bitstore_info_query {
         Ok(bitstore_info) => bitstore_info,
         Err(_err) => return Err(ContractError::BidStoreNotFound{}), // Return error if bitstore is not found
     };
-    println!("bitstore is{:?}",bitstore_info);
 
+    //refunding the bids to the bidder 
     for (index, bid) in bitstore_info.bids.iter().enumerate() {
     let amount = bid.1.amount;
     let denom = bid.1.denom.clone();
@@ -183,8 +170,9 @@ pub fn execute_cancel_deal(deps: DepsMut, _env: Env, info: MessageInfo, msg: Can
          }]};
         _messages.push(bidder_amount_msg); 
     }
+    //removal of the deal from deals 
     DEALS.remove(deps.storage,msg.deal_id);
-    // Return successful response
+
     Ok(Response::new().add_messages(_messages).add_attribute("action", "cancel_deal"))
 }
 
@@ -212,24 +200,28 @@ pub fn execute_place_bid(deps: DepsMut, _env: Env, info: MessageInfo, msg: Place
         if msg.price < deal.min_price {
             return Err(ContractError::MinimumPriceNotSatisfied{})
         }
+        //retriveal of bidstore of respective deal_id
         let mut bid_store = DEALSTORE.may_load(deps.storage,msg.deal_id)?;
         //Generating the unique bid_id
         let bid_id = BID_SEQ.update::<_,StdError>(deps.storage, |bid_id| Ok(bid_id.add(1)))?;
         deal.total_bid=deal.total_bid+msg.amount;
         let _res=DEALS.save(deps.storage, msg.deal_id, &deal);
+
+        //pushing the bids into the bidstore
         if let Some(mut store) = bid_store {
             store.bids.push((bid_id,bid));
             DEALSTORE.save(deps.storage,msg.deal_id, &store)?;
         } else {
             let mut new_store = BidStore { bids: vec![]};
+            //creating new bidstore if not existed 
             new_store.bids.push((bid_id,bid));
             DEALSTORE.save(deps.storage,msg.deal_id, &new_store)?;
         }
         //to know the updated bid_store_list
         let bid_store_updated= DEALSTORE.may_load(deps.storage,msg.deal_id)?;
+
         // msg for locking bid deposit in the contract
         let lock_funds_msg: BankMsg = BankMsg::Send{
-        // from_address: info.sender().to_string(),
         to_address: _env.contract.address.to_string(),
         amount: vec![Coin {
             denom: msg.denom,
@@ -267,19 +259,19 @@ pub fn withdraw_bid(
             let bid_amount = bid.1.amount;
             let denom = bid.1.denom.clone();
             let bidder = bid.1.bidder.clone();
-            if(info.sender.as_str()!=bidder){
+            if info.sender.as_str()!=bidder {
                 return Err(ContractError::InvalidBidder {});
             }; 
+            //withdrawing the bid 
            let lock_funds_msg: BankMsg = BankMsg::Send{
-            // from_address: info.sender().to_string(),
             to_address: bidder.to_string(),
             amount: vec![Coin {
                 denom: denom,
                 amount: bid_amount,
             }]};
             bank_msgs.push(lock_funds_msg);
-             deal.total_bid-=bid_amount;
-             DEALS.save(deps.storage,msg.deal_id,&deal);
+            deal.total_bid-=bid_amount;
+            DEALS.save(deps.storage,msg.deal_id,&deal);
            } 
         // Remove bid from BidStore
         deal_store.bids.remove(index);
@@ -291,15 +283,6 @@ pub fn withdraw_bid(
         Err(ContractError::BidIDNotFound{})
     }
  } 
-
-pub fn calculate_total_bid_deposit(bids_store: &BidStore)->Uint128{
-     let mut total_amount:Uint128=Uint128::new(0);
-     for (_bid_id,bid) in bids_store.bids.iter(){
-        total_amount+=bid.amount;
-     }
-     return total_amount;
-
-}
 
 pub fn sort_by_price_desc(bids_store: &mut BidStore) {
     bids_store.bids.sort_by(|a, b| {
@@ -325,7 +308,7 @@ pub fn refund_bids(bids_store: &mut BidStore,_info: MessageInfo,deal:Deal) ->Res
         }]};
         messages.push(refund_to_bidder);
      }
-
+    //refunding to the dealer
     let refund_to_dealer= BankMsg::Send{
         to_address: deal.deal_creator.to_string().clone(),
         amount: vec![Coin {
@@ -348,7 +331,7 @@ pub fn distribute_tokens(bids_store: &mut BidStore,total_bid_deposit:Uint128,dea
         let transfer_amount = remaining_bid_deposit.min(remaining_deposit);
         if transfer_amount > Uint128::zero() {
             if bid.amount <= transfer_amount {
-                // Update remaining amounts
+               //transfering the bids 
                 let transfer_to_bidder: BankMsg = BankMsg::Send{
                     to_address: bid.bidder.to_string().clone(),
                     amount: vec![Coin {
@@ -358,7 +341,6 @@ pub fn distribute_tokens(bids_store: &mut BidStore,total_bid_deposit:Uint128,dea
                 bid_transfer_messages.push(transfer_to_bidder);
                 remaining_bid_deposit -= bid.amount;
                 remaining_deposit -= bid.amount;
-                // Remove successful bid from BidStore
                 bids_store.bids.remove(index);
 
             } else {
@@ -377,8 +359,8 @@ pub fn distribute_tokens(bids_store: &mut BidStore,total_bid_deposit:Uint128,dea
                 index += 1; // Move to the next bid
             }
         } else {
-            // No more tokens to transfer
-            index += 1; // Move to the next bid
+            // No more tokens to transfer,traversing until end 
+            index += 1;
         }
     }
 
@@ -413,10 +395,6 @@ pub fn distribute_tokens(bids_store: &mut BidStore,total_bid_deposit:Uint128,dea
         }]};
         refund_messages.push(refund_to_deal_creator);
     }
-    println!("Refund Messages looks like this{:?}",refund_messages);
-    println!("Bid transfer Messages looks like this{:?}",bid_transfer_messages);
-    println!("Deal transfer Messages looks like this{:?}",deal_transfer_messages);
-
     let all_messages = refund_messages
     .into_iter()
     .chain(bid_transfer_messages.into_iter())
@@ -449,15 +427,11 @@ pub fn execute_deal(deps: DepsMut, _env: Env, _info: MessageInfo, msg: ExecuteDe
             None => return Err(ContractError::BidStoreNotFound {}),
         };
 
-        // Sort bid store by price descending
+        // Sort bid store by price descending order and bid id's
         sort_by_price_desc(&mut bid_store);
         println!("Sorted BidStore: {:?}", bid_store);
-
-        // Calculate total bid deposit
-        let total_bid_deposit = calculate_total_bid_deposit(&bid_store);
-        println!("Total bid deposit is {}", total_bid_deposit);
-
-        // Check if total bid deposit meets minimum capacity
+        
+        // Checking  if total bid deposit meets minimum capacity
         if deal.total_bid < min_cap.into() {
              let _res = refund_bids(&mut bid_store, _info.clone(), deal);
              DEALS.remove(deps.storage,msg.deal_id);
@@ -491,7 +465,7 @@ fn query_deal(deps: Deps, id: Uint64) -> StdResult<DealResponse> {
 
 fn query_bid(deps:Deps,id:Uint64,bid_id:Uint64) -> StdResult<BidResponse>{
     let bid_store=DEALSTORE.load(deps.storage,id.u64())?;
-      // Find the Bid with the specified bid_id in the loaded BidStore
+    // Find the Bid with the specified bid_id in the loaded BidStore
     let bid = bid_store
     .bids
     .into_iter()
@@ -500,6 +474,20 @@ fn query_bid(deps:Deps,id:Uint64,bid_id:Uint64) -> StdResult<BidResponse>{
     Ok(BidResponse { bid })
 }
 
+
+// Function to check the balance of an address for a given denom
+pub fn check_balance(deps: Deps, address: &str, denom: &str) -> StdResult<Uint128> {
+    let query_result = deps.querier.query_balance(address, denom);
+
+    // Handle the query result
+    match query_result {
+        Ok(balance) => Ok(balance.amount),
+        Err(err) => {
+            // Handle query error (e.g., address not found, denom not found, etc.)
+            Err(err)
+        }
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -536,7 +524,6 @@ mod tests {
         attr("owner","sender"),attr("addr","fee_addr")]);
       
         let balance=check_balance(deps.as_ref(), "sender", "uotc");
-        println!("before Balance -------{:?}",balance);
       //  should create deal
       let create_deal_msg = CreateDealMsg {
         deal_creator: Addr::unchecked(info.sender.to_string()),
@@ -577,7 +564,7 @@ mod tests {
     }
 
    #[test]
-    fn test_place_bid() {
+    fn test_place_bid_with_draw_bid() {
         //  let mut deps = mock_dependencies();
           let mut info = mock_info("sender", &[]);
           let mut deps = mock_dependencies(); // Initialize with empty storage
@@ -603,7 +590,7 @@ mod tests {
           attr("owner","sender"),attr("addr","fee_addr")]);
         
           let balance=check_balance(deps.as_ref(), "sender", "uotc");
-          println!("before Balance -------{:?}",balance);
+
         //  should create deal
         let create_deal_msg = CreateDealMsg {
           deal_creator: Addr::unchecked(info.sender.to_string()),
@@ -681,7 +668,7 @@ mod tests {
     }
    
     #[test]
-    fn test_execute_deal() {
+    fn test_execute_deal(){
         //  let mut deps = mock_dependencies();
           let mut info = mock_info("sender", &[]);
           let mut deps = mock_dependencies(); // Initialize with empty storage
@@ -771,12 +758,67 @@ mod tests {
     let res = execute(deps.as_mut(), mock_env(), info.clone(), msg.clone()).unwrap();
     // assert_eq!(res, ContractError::MinimumCapacityNotReached {});
     assert_eq!(res.attributes,vec![attr("action", "deal executed")]);
-    // let cancel_deal_msg = CancelDealMsg {
-    //         deal_id: 1u64,
-    //         };
-    //   let msg = ExecuteMsg::CancelDeal(cancel_deal_msg);
-    //   let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
-    //   assert_eq!(res.attributes, vec![attr("action", "cancel_deal")]);  
+    }
+
+
+    #[test]
+    fn test_cancel_deal(){
+        //  let mut deps = mock_dependencies();
+          let mut info = mock_info("sender", &[]);
+          let mut deps = mock_dependencies(); // Initialize with empty storage
+          // Initialize sender and recipient addresses
+          let sender_address = Addr::unchecked("sender");
+          let fee_collector_address = Addr::unchecked("fee_addr");
+      // Initialize sender and fee collector balances
+          deps.querier.update_balance(sender_address.clone(), coins(100, "uotc"));
+          deps.querier.update_balance(fee_collector_address.clone(), coins(0, "uotc"));
+          let mut env = mock_env();
+          env.block.height = 50;
+          let value=info.sender.to_string();
+          let msg = InstantiateMsg {
+              admin: Some(value),
+              fee_collector: String::from("fee_addr"),
+              fee_denom: String::from("uotc"),
+              deal_creation_fee: 10,
+              fee_percent: Decimal::percent(1),
+          };
+          let res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+          assert_eq!(res.attributes,vec![attr("method", "instantiate"),
+          attr("owner","sender"),attr("addr","fee_addr")]);
+        
+          let balance=check_balance(deps.as_ref(), "sender", "uotc");
+        //  should create deal
+            let create_deal_msg = CreateDealMsg {
+            deal_creator: Addr::unchecked(info.sender.to_string()),
+            min_cap: Uint128::new(700),
+            total_bid: Uint128::new(0),
+            deal_token_denom: "token_denom".to_string(),
+            deal_token_amount: Uint128::new(500),
+            start_block: Uint128::new(100),
+            end_block: Uint128::new(200000),
+            bid_token_denom: "bid_token_denom".to_string(),
+            min_price: Decimal::from_ratio(0u128, 2u128),
+        };
+        let msg = ExecuteMsg::CreateDeal(create_deal_msg);
+        let res = execute(deps.as_mut(), mock_env(), info.clone(), msg.clone()).unwrap();
+
+        let place_bid_msg = PlaceBidMsg {
+            deal_id:1u64,
+            bidder: Addr::unchecked("higher"),
+            amount:Uint128::new(100),
+            denom:"bid_token_denom".to_string(),
+            price: Decimal::from_ratio(1000u128, 3u128),
+        };
+        let msg = ExecuteMsg::PlaceBid(place_bid_msg);
+        let res = execute(deps.as_mut(), mock_env(), info.clone(), msg.clone()).unwrap();
+        let cancel_deal_msg = CancelDealMsg {
+            deal_id: 1u64,
+            };
+
+        let msg = ExecuteMsg::CancelDeal(cancel_deal_msg);
+        let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+        assert_eq!(res.attributes, vec![attr("action", "cancel_deal")]);  
+        
     }
 
 
