@@ -20,20 +20,27 @@ pub const CONFIG: Item<Config> = Item::new("config");
 pub struct Deal {
     /// deal_creator is the address
     pub deal_creator: Addr,
-    /// min_cap is the token threshold amount to begin swaps
+    /// min_cap is the token threshold to execute the deal
     pub min_cap: Uint128,
     /// total_bid keeps information on how much is the total bid for this deal.
     pub total_bid: Uint128,
+    //Token denom which is kept for the deal
     pub deal_token_denom: String,
+    //Amount which is kept for the deal
     pub deal_token_amount: Uint128,
+    //start block
     pub start_block: Uint128,
+    //end block
     pub end_block: Uint128,
+    //Token denom which is allowed for bidding 
     pub bid_token_denom: String,
+    //minimum price to place a bid 
     pub min_price: Decimal,
 }
 
 // DEAL_SEQ holds the last deal ID
 pub const DEAL_SEQ: Item<u64> = Item::new("deal_seq");
+//stores the mapping of deal_id an deal 
 pub const DEALS: Map<u64, Deal> = Map::new("deal");
 
 
@@ -45,45 +52,16 @@ pub struct Bid {
     pub price: Decimal,
 }
 
-
+//Used to generate unique sequence of  bid numbers 
 pub const BID_SEQ: Item<u64> = Item::new("bid_seq");
+//Storing bidstore for respective deals 
 pub const DEALSTORE: Map<u64, BidStore> = Map::new("deals");
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct BidStore {
     pub bids: Vec<(u64,Bid)>,
 }
-
-impl BidStore {
-    pub fn sort_by_price_desc(&mut self) {
-        self.bids.sort_by(|a, b| {
-            let cmp_price = b.1.price.cmp(&a.1.price); // Compare prices in descending order
-            if cmp_price == std::cmp::Ordering::Equal {
-                b.0.cmp(&a.0) // If prices are equal, compare bid IDs in ascending order
-            } else {
-                cmp_price
-            }
-        });
-    }
-}
-impl Default for BidStore {
-    fn default() -> Self {
-        BidStore { bids: vec![] }
-    }
-}
-
-
-#[cw_serde]
-    pub enum Status {
-        /// Waiting for start date
-        Waiting,
-        Active,
-        Done,
-        Cancelled,
-    }    
 
 
