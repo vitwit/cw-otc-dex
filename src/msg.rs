@@ -62,8 +62,8 @@ pub struct CreateDealMsg {
     pub total_bid: Uint128,
     pub deal_token_denom: String,
     pub deal_token_amount: Uint128,
-    pub start_block: Uint128,
-    pub end_block: Uint128,
+    pub start_block: u128,
+    pub end_block: u128,
     pub bid_token_denom: String,
     pub min_price: Decimal,
 }

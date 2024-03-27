@@ -38,13 +38,13 @@ pub fn instantiate(
     if msg.deal_creation_fee == 0 {
         return Err(ContractError::InvalidDealCreationFee {});
     }
-
+    let admin = msg.admin.clone().unwrap_or("".to_string());
     let config = Config {
         deal_creation_fee: msg.deal_creation_fee,
         deal_creation_fee_denom: msg.fee_denom,
         fee_percent: msg.fee_percent,
         fee_collector: deps.api.addr_validate(&msg.fee_collector)?,
-        admin: deps.api.addr_validate(&info.sender.to_string())?,
+        admin: deps.api.addr_validate(&admin)?,
     };
     let owner: Option<String>=msg.admin;
     let _owner = owner.unwrap_or("default".to_string());
@@ -81,8 +81,14 @@ pub fn execute(
 // Entry points for the message implementations
 pub fn execute_create_deal(deps: DepsMut, _env: Env, info: MessageInfo, msg: CreateDealMsg) -> Result<Response,ContractError> {
     let config = CONFIG.load(deps.storage)?;
-    if msg.start_block > msg.end_block{
+    //making sure to create a deal with start block height is less than end block height 
+    if msg.start_block > msg.end_block.clone(){
         return Err(ContractError::InvalidDealCreation{});
+    }
+    //checking whether current height is not more than end block height to create a deal 
+    let end_block_height=_env.block.height;
+    if end_block_height >= msg.end_block as u64{
+       return Err(ContractError::InvalidEndBlock{});
     }
     //creation of the deal 
     let deal = Deal {
@@ -111,7 +117,7 @@ pub fn execute_create_deal(deps: DepsMut, _env: Env, info: MessageInfo, msg: Cre
         }],
     };
 
-    // msg for locking otc deposit in the contract
+    // msg for locking otc deposit in the contract address
     let lock_funds_msg: BankMsg = BankMsg::Send{
         to_address: _env.contract.address.to_string(),
         amount: vec![Coin {
@@ -177,7 +183,7 @@ pub fn execute_cancel_deal(deps: DepsMut, _env: Env, info: MessageInfo, msg: Can
 
 pub fn execute_place_bid(deps: DepsMut, _env: Env, info: MessageInfo, msg: PlaceBidMsg) -> Result<Response,ContractError> {
         let bid= Bid {
-            bidder:Addr::unchecked(msg.bidder),
+            bidder:Addr::unchecked(msg.bidder.clone()),
             amount:msg.amount,
             denom:msg.denom.clone(),
             price:msg.price,
@@ -187,11 +193,13 @@ pub fn execute_place_bid(deps: DepsMut, _env: Env, info: MessageInfo, msg: Place
             return Err(ContractError::DealNotExisted{})
         }
         let mut deal=  DEALS.load(deps.storage,msg.deal_id)?;
-        let end_block_height=_env.block.height;
-        println!("block height is {}",end_block_height);
-        // if end_block_height >= deal.end_block as u64 {
-        //      return Err(ContractError::DealClosedForBidding{});
-        // }
+        //current height is already execeded the end block of deal we cannot able to place bid
+        if _env.block.height >= deal.end_block as u64{
+           return Err(ContractError::DealClosedForBidding {});
+        }
+        if msg.bidder!=info.sender {
+            return Err(ContractError::InvalidBidderAddress{});
+        }
         if deal.bid_token_denom!=msg.denom{
             return Err(ContractError::DenomNotMatched{})
         }
@@ -202,6 +210,7 @@ pub fn execute_place_bid(deps: DepsMut, _env: Env, info: MessageInfo, msg: Place
         let mut bid_store = DEALSTORE.may_load(deps.storage,msg.deal_id)?;
         //Generating the unique bid_id
         let bid_id = BID_SEQ.update::<_,StdError>(deps.storage, |bid_id| Ok(bid_id.add(1)))?;
+        //adding the bid value to the total bid
         deal.total_bid=deal.total_bid+msg.amount;
         let _res=DEALS.save(deps.storage, msg.deal_id, &deal);
 
@@ -215,9 +224,6 @@ pub fn execute_place_bid(deps: DepsMut, _env: Env, info: MessageInfo, msg: Place
             new_store.bids.push((bid_id,bid));
             DEALSTORE.save(deps.storage,msg.deal_id, &new_store)?;
         }
-        //to know the updated bid_store_list
-        let bid_store_updated= DEALSTORE.may_load(deps.storage,msg.deal_id)?;
-
         // msg for locking bid deposit in the contract
         let lock_funds_msg: BankMsg = BankMsg::Send{
         to_address: _env.contract.address.to_string(),
@@ -242,11 +248,7 @@ pub fn withdraw_bid(
         return Err(ContractError::DealNotExisted{})
     }
     let mut deal=  DEALS.load(deps.storage,msg.deal_id)?;
-    let end_block_height=Uint128::from(_env.block.height);
-    // if end_block_height >= deal.end_block {
-    //      return Err(ContractError::CannotWithdrawBid{});
-    // }
-    // Read DEALSTORE from storage
+   
     let mut deal_store = DEALSTORE.load(deps.storage, msg.deal_id)?;
     // Check if the bid_id is present in the bid_store
     if let Some(index) = deal_store.bids.iter().position(|(bid_id, _)| *bid_id == msg.bid_id) {
@@ -357,8 +359,8 @@ pub fn distribute_tokens(bids_store: &mut BidStore,total_bid_deposit:Uint128,dea
                 index += 1; // Move to the next bid
             }
         } else {
-            // No more tokens to transfer,traversing until end 
-            index += 1;
+            // No more tokens to transfer so break 
+            break;
         }
     }
 
@@ -409,14 +411,10 @@ pub fn execute_deal(deps: DepsMut, _env: Env, _info: MessageInfo, msg: ExecuteDe
         Ok(deal) => deal,
         Err(_err) => return Err( ContractError::DealNotExisted {}),
     };
-
-    let end_block_height=Uint128::from(_env.block.height);
-    // if end_block_height <= deal.end_block {
-    //     println!("block height is {}",end_block_height);
-    //      return Err(ContractError::DealTimeNotFulfilled{});
-    // }
-
-    
+    //current height is less than end block height,so we can't execute deal  
+    if _env.block.height <= deal.end_block as u64{
+         return Err(ContractError::DealTimeNotFulfilled{});
+    }    
     let min_cap=deal.min_cap;
    // let mut bid_store = DEALSTORE.may_load(deps.storage, msg.deal_id)?;
         // Loading  bid store 
@@ -437,7 +435,6 @@ pub fn execute_deal(deps: DepsMut, _env: Env, _info: MessageInfo, msg: ExecuteDe
         }
         // Distribute tokens
         let _resp = distribute_tokens(&mut bid_store, deal.total_bid, deal.deal_token_amount, _info.clone(), deal);
-        println!("After transferring the bid store looks like {:?}", bid_store);
          DEALS.remove(deps.storage,msg.deal_id);
         _resp.map_err(|e| ContractError::Std(e.into()))
 }
@@ -529,8 +526,8 @@ mod tests {
         total_bid: Uint128::new(0),
         deal_token_denom: "token_denom".to_string(),
         deal_token_amount: Uint128::new(1000),
-        start_block: Uint128::new(1000),
-        end_block: Uint128::new(2000),
+        start_block: 1000,
+        end_block: 20000,
         bid_token_denom: "bid_token_denom".to_string(),
         min_price: Decimal::from_ratio(0u128, 2u128),
     };
@@ -550,8 +547,8 @@ mod tests {
                 total_bid: Uint128::new(0),
                 deal_token_denom: "token_denom".to_string(),
                 deal_token_amount: Uint128::new(1000),
-                start_block: Uint128::new(1000),
-                end_block: Uint128::new(2000),
+                start_block: 1000,
+                end_block: 20000,
                 bid_token_denom: "bid_token_denom".to_string(),
                 min_price: Decimal::from_ratio(0u128, 2u128),   
             };
@@ -599,8 +596,8 @@ mod tests {
           total_bid: Uint128::new(0),
           deal_token_denom: "token_denom".to_string(),
           deal_token_amount: Uint128::new(1000),
-          start_block: Uint128::new(1000),
-          end_block: Uint128::new(2000),
+          start_block: 1000,
+          end_block: 20000,
           bid_token_denom: "bid_token_denom".to_string(),
           min_price: Decimal::from_ratio(0u128, 2u128),
       };
@@ -653,8 +650,8 @@ mod tests {
               total_bid: Uint128::new(0),
               deal_token_denom: "token_denom".to_string(),
               deal_token_amount: Uint128::new(1000),
-              start_block: Uint128::new(1000),
-              end_block: Uint128::new(2000),
+              start_block: 1000,
+              end_block: 20000,
               bid_token_denom: "bid_token_denom".to_string(),
               min_price: Decimal::from_ratio(0u128, 2u128),   
           };
@@ -701,8 +698,8 @@ mod tests {
           total_bid: Uint128::new(0),
           deal_token_denom: "token_denom".to_string(),
           deal_token_amount: Uint128::new(500),
-          start_block: Uint128::new(100),
-          end_block: Uint128::new(200000),
+          start_block: 100,
+          end_block: 200000,
           bid_token_denom: "bid_token_denom".to_string(),
           min_price: Decimal::from_ratio(0u128, 2u128),
       };
@@ -712,7 +709,7 @@ mod tests {
 
     let place_bid_msg = PlaceBidMsg {
         deal_id:1u64,
-        bidder: Addr::unchecked("user1"),
+        bidder: Addr::unchecked("sender"),
         amount:Uint128::new(100),
         denom:"bid_token_denom".to_string(),
         price: Decimal::from_ratio(10u128, 2u128),
@@ -727,7 +724,7 @@ mod tests {
      assert_eq!(
          bid,
          Bid{
-             bidder: Addr::unchecked("user1"),
+             bidder: Addr::unchecked("sender"),
              amount:Uint128::new(100),
              denom:"bid_token_denom".to_string(),
              price: Decimal::from_ratio(10u128, 2u128),
@@ -735,7 +732,7 @@ mod tests {
      );
     let place_bid_msg = PlaceBidMsg {
         deal_id:1u64,
-        bidder: Addr::unchecked("manu"),
+        bidder: Addr::unchecked("sender"),
         amount:Uint128::new(500),
         denom:"bid_token_denom".to_string(),
         price: Decimal::from_ratio(10u128, 2u128),
@@ -744,7 +741,7 @@ mod tests {
     let res = execute(deps.as_mut(), mock_env(), info.clone(), msg.clone()).unwrap();
     let place_bid_msg = PlaceBidMsg {
         deal_id:1u64,
-        bidder: Addr::unchecked("higher"),
+        bidder: Addr::unchecked("sender"),
         amount:Uint128::new(100),
         denom:"bid_token_denom".to_string(),
         price: Decimal::from_ratio(1000u128, 3u128),
@@ -795,8 +792,8 @@ mod tests {
             total_bid: Uint128::new(0),
             deal_token_denom: "token_denom".to_string(),
             deal_token_amount: Uint128::new(500),
-            start_block: Uint128::new(100),
-            end_block: Uint128::new(200000),
+            start_block:100,
+            end_block: 200000,
             bid_token_denom: "bid_token_denom".to_string(),
             min_price: Decimal::from_ratio(0u128, 2u128),
         };
@@ -805,7 +802,7 @@ mod tests {
 
         let place_bid_msg = PlaceBidMsg {
             deal_id:1u64,
-            bidder: Addr::unchecked("higher"),
+            bidder: Addr::unchecked("sender"),
             amount:Uint128::new(100),
             denom:"bid_token_denom".to_string(),
             price: Decimal::from_ratio(1000u128, 3u128),
@@ -814,8 +811,7 @@ mod tests {
         let res = execute(deps.as_mut(), mock_env(), info.clone(), msg.clone()).unwrap();
         let cancel_deal_msg = CancelDealMsg {
             deal_id: 1u64,
-            };
-
+        };
         let msg = ExecuteMsg::CancelDeal(cancel_deal_msg);
         let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
         assert_eq!(res.attributes, vec![attr("action", "cancel_deal")]);  

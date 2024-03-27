@@ -29,9 +29,9 @@ pub struct Deal {
     //Amount which is kept for the deal
     pub deal_token_amount: Uint128,
     //start block
-    pub start_block: Uint128,
+    pub start_block:u128,
     //end block
-    pub end_block: Uint128,
+    pub end_block:u128,
     //Token denom which is allowed for bidding 
     pub bid_token_denom: String,
     //minimum price to place a bid 

@@ -31,7 +31,7 @@ pub enum ContractError {
     BidStoreNotFound{},
  
     #[error("Bid id not found")]
-    BidIDNotFound,
+    BidIDNotFound{},
 
     #[error("Deal is not open for bidding")]
     DealClosedForBidding{},
@@ -52,7 +52,14 @@ pub enum ContractError {
     InvalidBidder{},
 
     #[error("You can't cancel the deal,you are not the deal creator")]
-    InvalidDealCreator{}
+    InvalidDealCreator{},
+
+    #[error("Invalid End Height for deal creation::height is already exceeded")]
+    InvalidEndBlock{},
+   
+    #[error("sender and the bidder address are not matching")]
+    InvalidBidderAddress{}
+
 }
 
 impl From<std::num::TryFromIntError> for ContractError {
