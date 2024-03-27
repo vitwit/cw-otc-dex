@@ -136,6 +136,7 @@ pub fn execute_cancel_deal(deps: DepsMut, _env: Env, info: MessageInfo, msg: Can
     Ok(_dealinfo)=>_dealinfo,
         Err(_err)=> return Err(ContractError::DealNotExisted {}),
     };
+    //checking whether the user is deal_creator or not 
     if _dealinfo.deal_creator!= info.sender {
           return Err(ContractError::InvalidDealCreator {});
     }
