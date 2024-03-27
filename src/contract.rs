@@ -10,10 +10,8 @@ use cosmwasm_std::{
 };
 use std::ops::Add;
 use cw2::{get_contract_version, set_contract_version};
-// use semver::Version;
-use crate::state::*;
 use crate::error::ContractError;
-use crate::state::{ Config, Deal, DEALSTORE, CONFIG, DEALS, DEAL_SEQ};
+use crate::state::{ Config, Deal, DEALSTORE, CONFIG, DEALS, DEAL_SEQ,BID_SEQ,Bid,BidStore,};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:cw-dotc";
@@ -34,7 +32,6 @@ pub fn instantiate(
 
     // fee percent must be less than 1 and greater than 0
     if msg.fee_percent >= Decimal::one() || msg.fee_percent < Decimal::zero() {
-         println!("error occureed");
         return Err(ContractError::InvalidFeePercent {});
     }
 
