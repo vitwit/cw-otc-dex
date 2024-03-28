@@ -299,7 +299,7 @@ pub fn withdraw_bid(
     //Retrieving Deal
     let mut deal = DEALS.load(deps.storage, msg.deal_id)?;
 
-    //LoadinG BidStore from DEALSTORE to deal_store
+    //Loading BidStore from DEALSTORE to deal_store
     let mut deal_store = DEALSTORE.load(deps.storage, msg.deal_id)?;
     // Check if the bid_id is present in the bid_store(stored in deal_store)
     if let Some(index) = deal_store.bids.iter().position(|(bid_id, _)| *bid_id == msg.bid_id) {
