@@ -51,8 +51,11 @@ pub enum ContractError {
     #[error("You cannot withdraw the bid,You are not the user of this bid")]
     InvalidBidder{},
 
-    #[error("You can't cancel the deal,you are not the deal creator")]
+    #[error("You can't create the deal,signer and creator address not matched")]
     InvalidDealCreator{},
+
+    #[error("You can't cancel the deal,you are not the deal creator")]
+    InvalidDealCanceller{},
 
     #[error("Invalid End Height for deal creation::height is already exceeded")]
     InvalidEndBlock{},
