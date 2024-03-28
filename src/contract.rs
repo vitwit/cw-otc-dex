@@ -105,6 +105,12 @@ pub fn execute_create_deal(
     if msg.start_block > msg.end_block.clone() {
         return Err(ContractError::InvalidDealCreation {});
     }
+
+    //Checking whether start_block is greater than network current block height or not
+    if msg.start_block > _env.block.height.into(){
+        return Err(ContractError::InvalidDealCreation {  });
+    }
+
     //checking whether current height is not more than end block height to create a deal
     let end_block_height = _env.block.height;
     if end_block_height >= (msg.end_block as u64) {
@@ -187,16 +193,16 @@ pub fn execute_cancel_deal(
     };
     _messages.push(deal_token_amount_msg);
     //retrieval of bids from respective deal_id
-    let bitstore_info_query = DEALSTORE.load(deps.storage, msg.deal_id);
-    let bitstore_info = match bitstore_info_query {
-        Ok(bitstore_info) => bitstore_info,
+    let bidstore_info_query = DEALSTORE.load(deps.storage, msg.deal_id);
+    let bidstore_info = match bidstore_info_query {
+        Ok(bidstore_info) => bidstore_info,
         Err(_err) => {
             return Err(ContractError::BidStoreNotFound {});
         } // Return error if bitstore is not found
     };
 
     //refunding the bids to the bidder
-    for (index, bid) in bitstore_info.bids.iter().enumerate() {
+    for (index, bid) in bidstore_info.bids.iter().enumerate() {
         let amount = bid.1.amount;
         let denom = bid.1.denom.clone();
         let bidder = bid.1.bidder.clone();
@@ -228,8 +234,8 @@ pub fn execute_place_bid(
         denom: msg.denom.clone(),
         price: msg.price,
     };
-    let res = DEALS.has(deps.storage, msg.deal_id);
-    if !res {
+    if !DEALS.has(deps.storage, msg.deal_id)
+    {
         return Err(ContractError::DealNotExisted {});
     }
     let mut deal = DEALS.load(deps.storage, msg.deal_id)?;
@@ -258,16 +264,14 @@ pub fn execute_place_bid(
     deal.total_bid = deal.total_bid + msg.amount;
     let _res = DEALS.save(deps.storage, msg.deal_id, &deal);
 
-    //pushing the bids into the bidstore
-    if let Some(mut store) = bid_store {
-        store.bids.push((bid_id, bid));
-        DEALSTORE.save(deps.storage, msg.deal_id, &store)?;
-    } else {
-        let mut new_store = BidStore { bids: vec![] };
-        //creating new bidstore if not existed
-        new_store.bids.push((bid_id, bid));
-        DEALSTORE.save(deps.storage, msg.deal_id, &new_store)?;
-    }
+      // initialize a new store if it's None, otherwise, use the existing store
+      let mut store = bid_store.unwrap_or_else(|| BidStore { bids: vec![] });
+      // push the bid into the store
+      store.bids.push((bid_id, bid));
+      // save the store
+      DEALSTORE.save(deps.storage, msg.deal_id, &store)?;
+
+
     // msg for locking bid deposit in the contract
     let lock_funds_msg: BankMsg = BankMsg::Send {
         to_address: _env.contract.address.to_string(),
@@ -292,13 +296,17 @@ pub fn withdraw_bid(
     msg: WithdrawBidMsg
 ) -> Result<Response, ContractError> {
     //Ckecking for Deal existance,return error if not exist
-    let res = DEALS.has(deps.storage, msg.deal_id);
-    if !res {
+    if !DEALS.has(deps.storage, msg.deal_id)
+    {
         return Err(ContractError::DealNotExisted {});
     }
     //Retrieving Deal
     let mut deal = DEALS.load(deps.storage, msg.deal_id)?;
 
+
+    if _env.block.height >= (deal.end_block as u64) {
+        return Err(ContractError::CannotWithdrawBid {})
+    }
     //Loading BidStore from DEALSTORE to deal_store
     let mut deal_store = DEALSTORE.load(deps.storage, msg.deal_id)?;
     // Check if the bid_id is present in the bid_store(stored in deal_store)

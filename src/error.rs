@@ -32,7 +32,7 @@ pub enum ContractError {
     #[error("Deal is Ended,You cannot withdraw your bid")] CannotWithdrawBid {},
 
     #[error(
-        "Deal is Not Created because of start height is greater than end height"
+        "Deal is Not Created because of start height is greater than end height or network current height"
     )] InvalidDealCreation {},
 
     #[error(
