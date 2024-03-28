@@ -86,7 +86,6 @@ pub struct PlaceBidMsg {
 pub struct WithdrawBidMsg {
     pub bid_id: u64,
     pub deal_id:u64,
-    pub bidder:Addr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

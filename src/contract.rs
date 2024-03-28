@@ -229,7 +229,7 @@ pub fn execute_place_bid(
         price: msg.price,
     };
     let res = DEALS.has(deps.storage, msg.deal_id);
-    if res == false {
+    if !res  {
         return Err(ContractError::DealNotExisted {});
     }
     let mut deal = DEALS.load(deps.storage, msg.deal_id)?;
@@ -291,14 +291,17 @@ pub fn withdraw_bid(
     info: MessageInfo,
     msg: WithdrawBidMsg
 ) -> Result<Response, ContractError> {
+    //Ckecking for Deal existance,return error if not exist
     let res = DEALS.has(deps.storage, msg.deal_id);
-    if res == false {
+    if  !res {
         return Err(ContractError::DealNotExisted {});
     }
+    //Retrieving Deal
     let mut deal = DEALS.load(deps.storage, msg.deal_id)?;
 
+    //LoadinG BidStore from DEALSTORE to deal_store
     let mut deal_store = DEALSTORE.load(deps.storage, msg.deal_id)?;
-    // Check if the bid_id is present in the bid_store
+    // Check if the bid_id is present in the bid_store(stored in deal_store)
     if let Some(index) = deal_store.bids.iter().position(|(bid_id, _)| *bid_id == msg.bid_id) {
         let mut bank_msgs = Vec::new();
         for (index, bid) in deal_store.bids.iter().enumerate() {
@@ -309,6 +312,7 @@ pub fn withdraw_bid(
                 return Err(ContractError::InvalidBidder {});
             }
             //withdrawing the bid
+            //sending bidder money back to bidder which is present in contract_address
             let lock_funds_msg: BankMsg = BankMsg::Send {
                 to_address: bidder.to_string(),
                 amount: vec![Coin {
@@ -317,7 +321,9 @@ pub fn withdraw_bid(
                 }],
             };
             bank_msgs.push(lock_funds_msg);
+            //Removing bid amount from the total bid
             deal.total_bid -= bid_amount;
+            //Updating Deal details after withdrawing bid
             DEALS.save(deps.storage, msg.deal_id, &deal);
         }
         // Remove bid from BidStore
@@ -325,9 +331,12 @@ pub fn withdraw_bid(
         // Update DEALSTORE in storage
         DEALSTORE.save(deps.storage, msg.deal_id, &deal_store)?;
         Ok(Response::new().add_messages(bank_msgs).add_attribute("action", "withdraw_bid"))
-    } else {
+    }  
+     //Return error if bid_id not exist 
+    else
+     {
         Err(ContractError::BidIDNotFound {})
-    }
+     }
 }
 
 pub fn sort_by_price_desc(bids_store: &mut BidStore) {
@@ -715,7 +724,6 @@ mod tests {
         let withdraw_bid_msg = WithdrawBidMsg {
             bid_id: 1,
             deal_id: 1,
-            bidder: Addr::unchecked("sender"),
         };
         let msg = ExecuteMsg::WithdrawBid(withdraw_bid_msg);
 

@@ -22,7 +22,7 @@ pub enum ContractError {
     DenomNotMatched{},
 
     #[error("overflow error")]
-    OverflowError,
+    OverflowError{},
 
     #[error("Deal Min-cap is not reached,so redistributed all the bids to bidders and deal amount to creator")]
     MinimumCapacityNotReached{},
@@ -67,7 +67,7 @@ pub enum ContractError {
 
 impl From<std::num::TryFromIntError> for ContractError {
 fn from(_: std::num::TryFromIntError) -> Self {
-    ContractError::OverflowError
+    ContractError::OverflowError{}
 }
 }
 
