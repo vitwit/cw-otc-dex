@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Deps, Addr, DepsMut, StdResult, Uint128, Uint64, Decimal};
-use cw_storage_plus::{Item, Map};
+use cosmwasm_std::{ Deps, Addr, DepsMut, StdResult, Uint128, Uint64, Decimal };
+use cw_storage_plus::{ Item, Map };
 // use serde::{Deserialize, Serialize};
 use core::cmp::Ordering;
 #[cw_serde]
@@ -29,20 +29,19 @@ pub struct Deal {
     //Amount which is kept for the deal
     pub deal_token_amount: Uint128,
     //start block
-    pub start_block:u128,
+    pub start_block: u128,
     //end block
-    pub end_block:u128,
-    //Token denom which is allowed for bidding 
+    pub end_block: u128,
+    //Token denom which is allowed for bidding
     pub bid_token_denom: String,
-    //minimum price to place a bid 
+    //minimum price to place a bid
     pub min_price: Decimal,
 }
 
 // DEAL_SEQ holds the last deal ID
 pub const DEAL_SEQ: Item<u64> = Item::new("deal_seq");
-//stores the mapping of deal_id an deal 
+//stores the mapping of deal_id an deal
 pub const DEALS: Map<u64, Deal> = Map::new("deal");
-
 
 #[cw_serde]
 pub struct Bid {
@@ -52,16 +51,14 @@ pub struct Bid {
     pub price: Decimal,
 }
 
-//Used to generate unique sequence of  bid numbers 
+//Used to generate unique sequence of  bid numbers
 pub const BID_SEQ: Item<u64> = Item::new("bid_seq");
-//Storing bidstore for respective deals 
+//Storing bidstore for respective deals
 pub const DEALSTORE: Map<u64, BidStore> = Map::new("deals");
 
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::{ Deserialize, Serialize };
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct BidStore {
-    pub bids: Vec<(u64,Bid)>,
+    pub bids: Vec<(u64, Bid)>,
 }
-
-

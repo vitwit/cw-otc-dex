@@ -1,11 +1,9 @@
-use crate::state::{Bid,Deal};
-use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Uint128, Uint64, Decimal, Decimal256};
-use cw_storage_plus::{Item, Map};
+use crate::state::{ Bid, Deal };
+use cosmwasm_schema::{ cw_serde, QueryResponses };
+use cosmwasm_std::{ Addr, Uint128, Uint64, Decimal, Decimal256 };
+use cw_storage_plus::{ Item, Map };
 use std::ops::Mul;
-use serde::{Deserialize, Serialize};
-
-
+use serde::{ Deserialize, Serialize };
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -18,39 +16,45 @@ pub struct InstantiateMsg {
     // deal_creation_fee is the minimum fee that the deal creator has to pay for creating the deal
     pub deal_creation_fee: u64,
     // fee_percent is the fees percentage, collected at the end of the deal / deal endtime
-    pub fee_percent: Decimal
+    pub fee_percent: Decimal,
 }
 
 #[cw_serde]
 pub enum ReceiveMsg {
     // Send sends token to an id with defined pot
-    Send { id: Uint64 },
+    Send {
+        id: Uint64,
+    },
 }
 
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     // GetDeal returns deal with given id
-    #[returns(DealResponse)]
-    GetDeal { id: Uint64 },
-    #[returns(BidStoreResponse)]
-    GetBidStore { id:Uint64},
-    #[returns(BidStoreResponse)]
-    GetBidDetails{id: Uint64,bid_id: Uint64},
+    #[returns(DealResponse)] GetDeal {
+        id: Uint64,
+    },
+    #[returns(BidStoreResponse)] GetBidStore {
+        id: Uint64,
+    },
+    #[returns(BidStoreResponse)] GetBidDetails {
+        id: Uint64,
+        bid_id: Uint64,
+    },
 }
 
 // We define a custom struct for each query response
 #[cw_serde]
-pub struct DealResponse {   
-       pub deal:Deal,
+pub struct DealResponse {
+    pub deal: Deal,
 }
 #[cw_serde]
-pub struct BidStoreResponse{
-    pub bids:Vec<(u64,Bid)>,
+pub struct BidStoreResponse {
+    pub bids: Vec<(u64, Bid)>,
 }
 #[cw_serde]
-pub struct BidResponse{
-    pub bid:Bid,
+pub struct BidResponse {
+    pub bid: Bid,
 }
 // Message struct definitions
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -85,7 +89,7 @@ pub struct PlaceBidMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct WithdrawBidMsg {
     pub bid_id: u64,
-    pub deal_id:u64,
+    pub deal_id: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

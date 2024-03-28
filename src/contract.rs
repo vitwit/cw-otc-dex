@@ -229,7 +229,7 @@ pub fn execute_place_bid(
         price: msg.price,
     };
     let res = DEALS.has(deps.storage, msg.deal_id);
-    if !res  {
+    if !res {
         return Err(ContractError::DealNotExisted {});
     }
     let mut deal = DEALS.load(deps.storage, msg.deal_id)?;
@@ -293,7 +293,7 @@ pub fn withdraw_bid(
 ) -> Result<Response, ContractError> {
     //Ckecking for Deal existance,return error if not exist
     let res = DEALS.has(deps.storage, msg.deal_id);
-    if  !res {
+    if !res {
         return Err(ContractError::DealNotExisted {});
     }
     //Retrieving Deal
@@ -331,12 +331,10 @@ pub fn withdraw_bid(
         // Update DEALSTORE in storage
         DEALSTORE.save(deps.storage, msg.deal_id, &deal_store)?;
         Ok(Response::new().add_messages(bank_msgs).add_attribute("action", "withdraw_bid"))
-    }  
-     //Return error if bid_id not exist 
-    else
-     {
+    } else {
+        //Return error if bid_id not exist
         Err(ContractError::BidIDNotFound {})
-     }
+    }
 }
 
 pub fn sort_by_price_desc(bids_store: &mut BidStore) {
