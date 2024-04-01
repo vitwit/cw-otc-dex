@@ -303,7 +303,6 @@ pub fn withdraw_bid(
     //Retrieving Deal
     let mut deal = DEALS.load(deps.storage, msg.deal_id)?;
 
-
     if _env.block.height >= (deal.end_block as u64) {
         return Err(ContractError::CannotWithdrawBid {})
     }
@@ -312,10 +311,11 @@ pub fn withdraw_bid(
     // Check if the bid_id is present in the bid_store(stored in deal_store)
     if let Some(index) = deal_store.bids.iter().position(|(bid_id, _)| *bid_id == msg.bid_id) {
         let mut bank_msgs = Vec::new();
-        for (index, bid) in deal_store.bids.iter().enumerate() {
-            let bid_amount = bid.1.amount;
-            let denom = bid.1.denom.clone();
-            let bidder = bid.1.bidder.clone();
+            
+            let bid_amount = deal_store.bids[index].1.amount;
+            let denom = deal_store.bids[index].1.denom.clone();
+            let bidder =  deal_store.bids[index].1.bidder.clone();
+            //checking whether the signer is matching with the bidder as per deal_id and bid_id
             if info.sender.as_str() != bidder {
                 return Err(ContractError::InvalidBidder {});
             }
@@ -331,9 +331,9 @@ pub fn withdraw_bid(
             bank_msgs.push(lock_funds_msg);
             //Removing bid amount from the total bid
             deal.total_bid -= bid_amount;
+
             //Updating Deal details after withdrawing bid
             DEALS.save(deps.storage, msg.deal_id, &deal);
-        }
         // Remove bid from BidStore
         deal_store.bids.remove(index);
         // Update DEALSTORE in storage
@@ -715,7 +715,6 @@ mod tests {
         let msg = QueryMsg::GetBidStore { id: Uint64::new(1) };
         let res = query(deps.as_ref(), mock_env(), msg).unwrap();
         let bid_store: BidStore = from_binary(&res).unwrap();
-        println!("queried bid store {:?}", bid_store);
         let mut bids: Vec<(u64, Bid)> = Vec::new();
         let bid_id = 1u64;
         let bid_1 = Bid {
@@ -726,9 +725,23 @@ mod tests {
         };
         bids.push((bid_id, bid_1));
         assert_eq!(bid_store.bids, bids);
+
+        let place_bid_msg = PlaceBidMsg {
+            deal_id: 1u64,
+            bidder: Addr::unchecked(info.sender.to_string()),
+            amount: Uint128::new(500),
+            denom: "bid_token_denom".to_string(),
+            price: Decimal::from_ratio(10u128, 2u128),
+        };
+
+        
+        let msg = ExecuteMsg::PlaceBid(place_bid_msg);
+        let res = execute(deps.as_mut(), mock_env(), info.clone(), msg.clone()).unwrap();
+        assert_eq!(res.attributes, vec![attr("action", "place_bid"), attr("bid_id", "2")]);
+
         //withdrawtest
         let withdraw_bid_msg = WithdrawBidMsg {
-            bid_id: 1,
+            bid_id: 2,
             deal_id: 1,
         };
         let msg = ExecuteMsg::WithdrawBid(withdraw_bid_msg);
@@ -742,7 +755,7 @@ mod tests {
         let dealresp = Deal {
             deal_creator: Addr::unchecked("sender"),
             min_cap: Uint128::new(100),
-            total_bid: Uint128::new(0),
+            total_bid: Uint128::new(100),
             deal_token_denom: "token_denom".to_string(),
             deal_token_amount: Uint128::new(1000),
             start_block: 1000,
