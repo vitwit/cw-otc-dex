@@ -310,8 +310,7 @@ pub fn withdraw_bid(
     let mut deal_store = DEALSTORE.load(deps.storage, msg.deal_id)?;
     // Check if the bid_id is present in the bid_store(stored in deal_store)
     if let Some(index) = deal_store.bids.iter().position(|(bid_id, _)| *bid_id == msg.bid_id) {
-        let mut bank_msgs = Vec::new();
-            
+            let mut bank_msgs = Vec::new();
             let bid_amount = deal_store.bids[index].1.amount;
             let denom = deal_store.bids[index].1.denom.clone();
             let bidder =  deal_store.bids[index].1.bidder.clone();
@@ -781,7 +780,7 @@ mod tests {
         deps.querier.update_balance(sender_address.clone(), coins(100, "uotc"));
         deps.querier.update_balance(fee_collector_address.clone(), coins(0, "uotc"));
         let mut env = mock_env();
-        env.block.height = 50;
+        env.block.height = 0;
         let value = info.sender.to_string();
         let msg = InstantiateMsg {
             admin: Some(value),
