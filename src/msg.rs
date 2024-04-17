@@ -41,6 +41,9 @@ pub enum QueryMsg {
         id: Uint64,
         bid_id: Uint64,
     },
+    #[returns(AllDealsResponse)] GetAllDeals{
+
+    },
 }
 
 // We define a custom struct for each query response
@@ -55,6 +58,11 @@ pub struct BidStoreResponse {
 #[cw_serde]
 pub struct BidResponse {
     pub bid: Bid,
+}
+
+#[cw_serde]
+pub struct AllDealsResponse{
+    pub deals:Vec<(u64, Deal)>,
 }
 // Message struct definitions
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

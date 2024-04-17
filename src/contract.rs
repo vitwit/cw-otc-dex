@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::Coin;
+use cosmwasm_std::{Coin, Order};
 use crate::msg::*;
 use cw_storage_plus::Map;
 use cosmwasm_std::coins;
@@ -25,7 +25,10 @@ use std::ops::Add;
 use cw2::{ get_contract_version, set_contract_version };
 use crate::error::ContractError;
 use crate::state::{ Config, Deal, DEALSTORE, CONFIG, DEALS, DEAL_SEQ, BID_SEQ, Bid, BidStore };
-
+use cosmwasm_storage::{ ReadonlyPrefixedStorage,};
+// use cosmwasm_std::{Deps, StdResult};
+use cosmwasm_storage::{PrefixedStorage};
+use std::vec::Vec;
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:cw-dotc";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -559,8 +562,34 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::GetDeal { id } => to_binary(&query_deal(deps, id)?),
         QueryMsg::GetBidStore { id } => to_binary(&query_bid_store(deps, id)?),
         QueryMsg::GetBidDetails { id, bid_id } => to_binary(&query_bid(deps, id, bid_id)?),
+        QueryMsg::GetAllDeals{ }=>to_binary(&query_all_deals(deps)?),
     }
 }
+
+fn query_all_deals(deps: Deps) -> StdResult<AllDealsResponse> {
+    // Obtain keys from DEALS
+    let keys_iter: Result<Vec<_>, _> = DEALS
+        .keys(deps.storage, None, None, Order::Ascending)
+        .collect();
+
+    // Unwrap keys or return error if unwrapping fails
+    let keys = keys_iter?;
+
+    // Initialize an empty vector to store all deals
+    let mut all_deals: Vec<(u64, Deal)> = Vec::new();
+
+    // Iterate over the keys
+    for key in keys {
+        // Load the Deal associated with the key
+        let deal = DEALS.load(deps.storage, key)?;
+
+        // Push the key and Deal tuple to the vector
+        all_deals.push((key, deal));
+    }
+    
+    Ok(AllDealsResponse { deals: all_deals })
+}
+
 
 fn query_bid_store(deps: Deps, id: Uint64) -> StdResult<BidStoreResponse> {
     let bid_store = DEALSTORE.load(deps.storage, id.into())?;
@@ -656,6 +685,26 @@ mod tests {
             deal: dealresp,
         };
         assert_eq!(deal, deal_response);
+
+
+        let create_deal_msg = CreateDealMsg {
+            deal_creator: Addr::unchecked(info.sender.to_string()),
+            min_cap: Uint128::new(100),
+            total_bid: Uint128::new(0),
+            deal_token_denom: "token_denom".to_string(),
+            deal_token_amount: Uint128::new(1000),
+            start_block: 1000,
+            end_block: 20000,
+            bid_token_denom: "bid_token_denom".to_string(),
+            min_price: Decimal::from_ratio(0u128, 2u128),
+        };
+        let msg = ExecuteMsg::CreateDeal(create_deal_msg);
+        let res = execute(deps.as_mut(), mock_env(), info.clone(), msg.clone()).unwrap();
+      
+        let msg = QueryMsg::GetAllDeals{};
+        let res = query(deps.as_ref(), mock_env(), msg).unwrap();
+        // let deal: DealResponse = from_binary(&res).unwrap();
+        // print!("deals are{:?}",deal);
     }
 
     #[test]
