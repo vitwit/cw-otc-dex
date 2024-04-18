@@ -1,20 +1,11 @@
 /** @type {import('tailwindcss').Config} */
-const colors = require("tailwindcss/colors");
-
-export default {
+module.exports = {
   content: [
-    "./index.html",
-    './src/components/**/*.vue',
-    './src/components/**/*.{vue,js,ts,jsx,tsx}',
-    "./src/**/*.{vue,js,ts,jsx,tsx}",
+    "./src/**/*.{js,jsx,ts,tsx}",
   ],
   theme: {
-    extend: {
-      fontFamily: {
-        // sans: ['Alata', 'sans-serif'],
-      }
-    },
+    extend: {},
   },
   plugins: [],
-  safelist: [],
 }
+
