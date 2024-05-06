@@ -2,7 +2,6 @@ import { SigningStargateClient } from "@cosmjs/stargate";
 import { SigningCosmWasmClient } from "cosmwasm";
 import { GasPrice } from "@cosmjs/stargate";
 export async function getOfflineSignerAndCosmWasmClient() {
-  console.log("hii");
   const chain_config={
     chainId: 'testnet',
     chainName: 'otc',
@@ -88,6 +87,5 @@ export async function getOfflineSignerAndCosmWasmClient() {
   const CosmWasmClient = await SigningCosmWasmClient.connectWithSigner('http://127.0.0.1:26657', offlineSigner,{
     gasPrice:100000
   });
-  console.log("hello",CosmWasmClient);
   return { offlineSigner, CosmWasmClient };
 }
