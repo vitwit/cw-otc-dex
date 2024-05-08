@@ -1,0 +1,5 @@
+# Configure postgre DB
+[database]
+database_name = "otcdb"
+database_user = "otcuser"
+database_password = "Bud29K7{9"

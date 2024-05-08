@@ -1,12 +1,13 @@
 import { SigningStargateClient } from "@cosmjs/stargate";
 import { SigningCosmWasmClient } from "cosmwasm";
 import { GasPrice } from "@cosmjs/stargate";
+import { AppConstants } from "./config/constant";
 export async function getOfflineSignerAndCosmWasmClient() {
-  const chain_config={
-    chainId: 'testnet',
+  const chain_config = {
+    chainId: AppConstants.CHAIN_ID,
     chainName: 'otc',
-    rest: 'http://127.0.0.1:1317',
-    rpc: 'http://127.0.0.1:26657',
+    rest: 'http://128.199.28.216:1317',
+    rpc: 'http://128.199.28.216:26657',
     currencies: [
       {
         coinDenom: 'STAKE',
@@ -81,11 +82,12 @@ export async function getOfflineSignerAndCosmWasmClient() {
     },
   }
   window.keplr.experimentalSuggestChain(chain_config);
-  const chainId='testnet';
+  const chainId = AppConstants.CHAIN_ID;
   await window.keplr.enable(chainId);
   const offlineSigner = await window.getOfflineSigner(chainId);
-  const CosmWasmClient = await SigningCosmWasmClient.connectWithSigner('http://127.0.0.1:26657', offlineSigner,{
-    gasPrice:100000
+  const CosmWasmClient = await SigningCosmWasmClient.connectWithSigner('http://128.199.28.216:26657', offlineSigner, {
+    gasPrice: 100000,
   });
+
   return { offlineSigner, CosmWasmClient };
 }

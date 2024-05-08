@@ -1,15 +1,15 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import Deal from "./Deal";
-import ContractInteractionComponent from "./ContractInteractionComponent";
 import { useEffect, useState } from "react";
-import { useAllDeals } from "./useAllDeals";
+import Header from "./components/Header";
+import { useAllDeals } from "./hooks/useAllDeals";
 const DealsComponent = () => {
   const [deals, setDeals] = useState(null);
 
   // Call useAllDeals hook directly within the component body
   // Update deals state when response changes
-  const {user,response}= useAllDeals();
+  const { user, response } = useAllDeals();
   useEffect(() => {
     if (response) {
       console.log(response.deals);
@@ -17,76 +17,11 @@ const DealsComponent = () => {
     }
   }, [response]);
 
-  // if(response!=null){
-  //     response.deals.forEach((dealArray, index) => {
-  //         const dealId = dealArray[0];
-  //         const dealDetails = dealArray[1];
 
-  //         console.log(`Deal ${index + 1}:`);
-  //         console.log("Deal ID:", dealId);
-  //         console.log("Deal Details:", dealDetails);
-  //         console.log("---------------------------");
-  //       });
-  // }
   return (
     <>
       <div>
-        <nav className="fixed right-0 top-0 w-full flex p-2 bg-white/90 backdrop-blur-sm z-50 font-['Raleway'] shadow-sm">
-          <div className="w-full px-4 sm:px-6 lg:px-8">
-            <div className="flex h-16 items-center justify-between">
-              <a href="/" className="flex-shrink-0">
-                <img
-                  className="min-w-32"
-                  src="/assets/img/otc-logo-1.svg"
-                  alt="Your Company"
-                />
-              </a>
-
-              <div className="hidden md:block mx-auto flex items-baseline space-x-7">
-                <a
-                  href="#"
-                  className="hover:text-rose-600 rounded-md px-3 py-2 text-md text-black font-medium"
-                >
-                  Explore
-                </a>
-                <a
-                  href="#"
-                  className="hover:text-rose-600 rounded-md px-3 py-2 text-md font-medium"
-                >
-                  Learn
-                </a>
-                <a
-                  href="#"
-                  className="hover:text-rose-600 rounded-md px-3 py-2 text-md font-medium"
-                >
-                  Marketplace
-                </a>
-                <a
-                  href="#"
-                  className="hover:text-rose-600 rounded-md px-3 py-2 text-md font-medium"
-                >
-                  Earn
-                </a>
-                <a
-                  href="#"
-                  className="hover:text-rose-600 rounded-md px-3 py-2 text-md font-medium"
-                >
-                  Brand
-                </a>
-              </div>
-
-              <div className="ml-auto flex items-baseline space-x-4">
-                <a
-                  href="/profile"
-                  className="px-6 py-2 hover:bg-slate-100 border border-gray-400 rounded-xl text-black/60 font-medium cursor-pointer"
-                >
-                  <i className="fas fa-user text-sm mr-2" />
-                  {user}
-                </a>
-              </div>
-            </div>
-          </div>
-        </nav>
+        <Header />
 
         <div className="h-20"></div>
 
@@ -122,7 +57,7 @@ const DealsComponent = () => {
             </button>
           </div>
           <div className="grid grid-cols-4 gap-4 mt-12 mb-36">
-            <div className="col-span-4 md:col-span-1 bg-white w-full border border-gray-200 rounded-lg p-4 relative ">
+            {/* <div className="col-span-4 md:col-span-1 bg-white w-full border border-gray-200 rounded-lg p-4 relative ">
               <div className="flex flex-row mb-1 justify-start">
                 <div className="text-xs text-slate-500 mr-3">
                   <i className="fa-solid fa-atom"></i>
@@ -586,22 +521,23 @@ const DealsComponent = () => {
                   <span className="font-medium">Deal will execute</span>
                 </p>
               </div>
-            </div>
-            
-              {/* Map over the deals array and render Deal component for each deal */}
-              {deals && deals.length > 0 ? (
-                <>
-                  {/* Map over the deals array and render Deal component for each deal */}
-                  {deals.map((deal, index) => (
-                    <Deal
-                      dealId={deal[0]}
-                      dealDetails={deal[1]}
-                    />
-                  ))}
-                </>
-              ) : (
-                <p>No deals available</p>
-              )}
+            </div> */}
+
+            {/* Map over the deals array and render Deal component for each deal */}
+            {deals && deals.length > 0 ? (
+              <>
+                {/* Map over the deals array and render Deal component for each deal */}
+                {deals.map((deal, index) => (
+                  <Deal
+                    dealId={deal[0]}
+                    dealDetails={deal[1]}
+                    key={index}
+                  />
+                ))}
+              </>
+            ) : (
+              <p>No deals available</p>
+            )}
           </div>
         </main>
         <style>{`
