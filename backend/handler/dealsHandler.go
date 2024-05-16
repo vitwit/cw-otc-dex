@@ -16,7 +16,13 @@ func GetDeals(db *sql.DB) http.HandlerFunc {
 
 		params := r.URL.Query()
 		status := params.Get("status")
-		rows, err := db.Query(fmt.Sprintf(`SELECT * FROM deal WHERE status = '%s'`, status))
+		dbQuery := ""
+		if status == "all" {
+			dbQuery = fmt.Sprintf(`SELECT * FROM deal`)
+		} else {
+			dbQuery = fmt.Sprintf(`SELECT * FROM deal WHERE status = '%s'`, status)
+		}
+		rows, err := db.Query(dbQuery)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to fetch deals: %s", err), http.StatusInternalServerError)
 			return
@@ -59,17 +65,11 @@ func CreateDeal(db *sql.DB) http.HandlerFunc {
 			http.Error(w, "Failed to parse request body", http.StatusBadRequest)
 			return
 		}
-		defer func(db *sql.DB) {
-			err := db.Close()
-			if err != nil {
-				http.Error(w, "Failed to close DB connection", http.StatusInternalServerError)
-				return
-			}
-		}(db)
+
 		id := 0
 		err = db.QueryRow(`
-		INSERT INTO deal (BidToken, DealCreator, DealTokenAmount, DealTokenDenom, EndBlock, MinCap, MinPrice, StartBlock, TotalBid)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO deal (BidToken, DealCreator, DealTokenAmount, DealTokenDenom, EndBlock, MinCap, MinPrice, StartBlock, TotalBid, Description, Title, Status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING ID`,
 			deal.BidToken,
 			deal.DealCreator,
@@ -79,7 +79,11 @@ func CreateDeal(db *sql.DB) http.HandlerFunc {
 			deal.MinCap,
 			deal.MinPrice,
 			deal.StartBlock,
-			deal.StartBlock).Scan(&id)
+			deal.StartBlock,
+			deal.Description,
+			deal.Title,
+			"Upcoming",
+		).Scan(&id)
 		if err != nil {
 			fmt.Println("Error inserting row:", err)
 		}
@@ -111,14 +115,6 @@ func UpdateDeal(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		defer func(db *sql.DB) {
-			err := db.Close()
-			if err != nil {
-				http.Error(w, "Failed to close DB connection", http.StatusInternalServerError)
-				return
-			}
-		}(db)
-
 		// Construct the SQL UPDATE statement
 		query := `
 			UPDATE deal
@@ -130,8 +126,10 @@ func UpdateDeal(db *sql.DB) http.HandlerFunc {
 				MinCap = COALESCE($6, MinCap),
 				MinPrice = COALESCE($7, MinPrice),
 				StartBlock = COALESCE($8, StartBlock),
-				TotalBid = COALESCE($9, TotalBid)
-			WHERE ID = $10
+				TotalBid = COALESCE($9, TotalBid),
+				Description = COALESCE($10, Description),
+				Title = COALESCE($11, Title)
+			WHERE ID = $12
 		`
 
 		// Execute the SQL UPDATE statement
@@ -145,6 +143,8 @@ func UpdateDeal(db *sql.DB) http.HandlerFunc {
 			deal.MinPrice,
 			deal.StartBlock,
 			deal.TotalBid,
+			deal.Description,
+			deal.Title,
 			deal.ID,
 		)
 		if err != nil {

@@ -26,6 +26,7 @@ func GetEndpoints(db *sql.DB) {
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
 		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
 	)
+        router.Use(corsMiddleware)
 	http.Handle("/", corsMiddleware(router))
 	logger := log.Logger
 	defer func() {
