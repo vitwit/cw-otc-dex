@@ -32,7 +32,7 @@ func GetDeals(db *sql.DB) http.HandlerFunc {
 		var deals []types.Deal
 		for rows.Next() {
 			var deal types.Deal
-			if err := rows.Scan(&deal.ID, &deal.BidToken, &deal.DealCreator, &deal.DealTokenAmount, &deal.DealTokenDenom, &deal.EndBlock, &deal.MinCap, &deal.MinPrice, &deal.StartBlock, &deal.TotalBid, &deal.Status); err != nil {
+			if err := rows.Scan(&deal.ID, &deal.BidToken, &deal.DealCreator, &deal.DealTokenAmount, &deal.DealTokenDenom, &deal.EndBlock, &deal.MinCap, &deal.MinPrice, &deal.StartBlock, &deal.TotalBid, &deal.Status, &deal.Title, &deal.Description); err != nil {
 				http.Error(w, "Failed to scan row", http.StatusInternalServerError)
 				return
 			}
