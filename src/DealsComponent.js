@@ -4,25 +4,39 @@ import Deal from "./Deal";
 import { useEffect, useState } from "react";
 import Header from "./components/Header";
 import { useAllDeals } from "./hooks/useAllDeals";
+import axiosInstance from './api/axios'
 const DealsComponent = () => {
   const [deals, setDeals] = useState(null);
-
+  const [isWalletConnected, setIsWalletConnected] = useState(false);
   // Call useAllDeals hook directly within the component body
   // Update deals state when response changes
   const { user, response } = useAllDeals();
+  axiosInstance
+  .get('/fetch-deals',{
+    params: {
+      status: 'all'
+    }
+  })
+  .then((res) => {
+    console.log("successfully fetched deals", res);
+    // Handle the response data here
+  })
+  .catch((err) => {
+    console.log("error when fetching deals", err);
+    // Handle errors here
+  });
+
   useEffect(() => {
     if (response) {
-      console.log(response.deals);
+      // console.log(response.deals);
       setDeals(response.deals);
     }
   }, [response]);
 
-
   return (
     <>
       <div>
-        <Header />
-
+        <Header/>
         <div className="h-20"></div>
 
         <main className="px-4 md:px-24 mt-9 mb-9">
