@@ -67,6 +67,8 @@ pub struct AllDealsResponse{
 // Message struct definitions
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CreateDealMsg {
+    pub deal_title:String,
+    pub deal_description:String,
     pub deal_creator: Addr,
     /// min_cap is the token threshold amount to begin swaps
     pub min_cap: Uint128,

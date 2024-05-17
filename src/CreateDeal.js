@@ -358,7 +358,7 @@ const CreateDeal = () => {
                   <input
                     name="bidEndDate"
                     type="datetime-local"
-                    placeholder="2024-04-09"
+                    laceholder="2024-04-09T12:00"
                     className="border border-gray-300 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2"
                   />
                 </div>

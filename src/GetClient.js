@@ -79,30 +79,12 @@ export async function getOfflineSignerAndCosmWasmClient() {
         'linear-gradient(180deg, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0) 100%)',
     },
   }
-  // window.keplr.experimentalSuggestChain(chain_config);
+   window.keplr.experimentalSuggestChain(chain_config);
   const chainId = AppConstants.CHAIN_ID;
   await window.keplr.enable(chainId);
   const offlineSigner = await window.getOfflineSigner(chainId);
   const CosmWasmClient = await SigningCosmWasmClient.connectWithSigner(AppConstants.RPC_URL, offlineSigner, {
     gasPrice: 100000,
   });
-  console.log("client",CosmWasmClient);
-  // function extractValueByKey(attributes, key) {
-  //   const attribute = attributes.find(attr => attr.key === key);
-  //   return attribute ? attribute.value : null;
-  // }
-  
-  // // Function to find values for "action" and "deal_id" in attributes
-  // function findActionAndDealId(attributes) {
-  //   const action = extractValueByKey(attributes, 'action');
-  //   const dealId = extractValueByKey(attributes, 'deal_id');
-  //   return { action, dealId };
-  // }
-  
-  // // Extracting values for "action" and "deal_id"
-  // const { action } = findActionAndDealId(response.txResponse.events[8].attributes,"amount");
-  // // // Logging the extracted values
-  // console.log('Action:', action);
-  // console.log('Deal ID:', dealId);
   return { offlineSigner, CosmWasmClient };
 }
