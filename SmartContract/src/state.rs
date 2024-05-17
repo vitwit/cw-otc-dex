@@ -18,6 +18,10 @@ pub const CONFIG: Item<Config> = Item::new("config");
 
 #[cw_serde]
 pub struct Deal {
+    /// deal_title
+    pub deal_title:String,
+    //deal_description
+    pub deal_description:String,
     /// deal_creator is the address
     pub deal_creator: Addr,
     /// min_cap is the token threshold to execute the deal

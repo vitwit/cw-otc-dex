@@ -125,6 +125,8 @@ pub fn execute_create_deal(
     }
     //creation of the deal
     let deal = Deal {
+        deal_title:msg.deal_title,
+        deal_description:msg.deal_description,
         deal_creator: Addr::unchecked(msg.deal_creator),
         min_cap: msg.min_cap,
         total_bid: msg.total_bid,
@@ -655,6 +657,8 @@ mod tests {
         );
         //  should create deal
         let create_deal_msg = CreateDealMsg {
+            deal_title:"osmo for exchange".to_string(),
+            deal_description:"looking for buyers".to_string(),
             deal_creator: Addr::unchecked(info.sender.to_string()),
             min_cap: Uint128::new(100),
             total_bid: Uint128::new(0),
@@ -671,6 +675,8 @@ mod tests {
         let res = query(deps.as_ref(), mock_env(), msg).unwrap();
         let deal: DealResponse = from_binary(&res).unwrap();
         let dealresp = Deal {
+            deal_title:"osmo for exchange".to_string(),
+            deal_description:"looking for buyers".to_string(),
             deal_creator: Addr::unchecked("sender"),
             min_cap: Uint128::new(100),
             total_bid: Uint128::new(0),
@@ -688,6 +694,8 @@ mod tests {
 
 
         let create_deal_msg = CreateDealMsg {
+            deal_title:"osmo for exchange".to_string(),
+            deal_description:"looking for buyers".to_string(),
             deal_creator: Addr::unchecked(info.sender.to_string()),
             min_cap: Uint128::new(100),
             total_bid: Uint128::new(0),
@@ -736,6 +744,8 @@ mod tests {
         );
         //  should create deal
         let create_deal_msg = CreateDealMsg {
+            deal_title:"osmo for exchange".to_string(),
+            deal_description:"looking for buyers".to_string(),
             deal_creator: Addr::unchecked(info.sender.to_string()),
             min_cap: Uint128::new(100),
             total_bid: Uint128::new(0),
@@ -801,6 +811,8 @@ mod tests {
         let res = query(deps.as_ref(), mock_env(), msg).unwrap();
         let deal: DealResponse = from_binary(&res).unwrap();
         let dealresp = Deal {
+            deal_title:"osmo for exchange".to_string(),
+            deal_description:"looking for buyers".to_string(),
             deal_creator: Addr::unchecked("sender"),
             min_cap: Uint128::new(100),
             total_bid: Uint128::new(100),
@@ -845,6 +857,8 @@ mod tests {
         );
         //  should create deal
         let create_deal_msg = CreateDealMsg {
+            deal_title:"osmo for exchange".to_string(),
+            deal_description:"looking for buyers".to_string(),
             deal_creator: Addr::unchecked(info.sender.to_string()),
             min_cap: Uint128::new(700),
             total_bid: Uint128::new(0),
@@ -933,6 +947,8 @@ mod tests {
         );
         //  should create deal
         let create_deal_msg = CreateDealMsg {
+            deal_title:"osmo for exchange".to_string(),
+            deal_description:"looking for buyers".to_string(),
             deal_creator: Addr::unchecked(info.sender.to_string()),
             min_cap: Uint128::new(700),
             total_bid: Uint128::new(0),

@@ -1,8 +1,10 @@
+import { AppConstants } from "./config/constant";
+
 export const chain_config = {
   chainId: 'testnet',
   chainName: 'otc',
   rest: 'http://128.199.28.216:1317',
-  rpc: 'http://128.199.28.216:26657',
+  rpc: AppConstants.RPC_URL,
   currencies: [
     {
       coinDenom: 'STAKE',

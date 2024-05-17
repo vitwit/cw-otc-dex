@@ -1,11 +1,11 @@
 import { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
-import { AppConstants } from "./config/constant";
-export async function getOfflineSignerAndCosmWasmClient() {
-  const chain_config = {
-    chainId: AppConstants.CHAIN_ID,  
+export async function getUser() {
+  console.log("before");
+  const chain_config={
+    chainId: 'testnet',
     chainName: 'otc',
     rest: 'http://142.93.213.125:1317',
-    rpc: AppConstants.RPC_URL,
+    rpc: 'http://142.93.213.125:26657',
     currencies: [
       {
         coinDenom: 'STAKE',
@@ -79,12 +79,15 @@ export async function getOfflineSignerAndCosmWasmClient() {
         'linear-gradient(180deg, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0) 100%)',
     },
   }
-   window.keplr.experimentalSuggestChain(chain_config);
-  const chainId = AppConstants.CHAIN_ID;
+  window.keplr.experimentalSuggestChain(chain_config);
+  console.log("after");
+  const chainId='testnet';
   await window.keplr.enable(chainId);
   const offlineSigner = await window.getOfflineSigner(chainId);
-  const CosmWasmClient = await SigningCosmWasmClient.connectWithSigner(AppConstants.RPC_URL, offlineSigner, {
-    gasPrice: 100000,
-  });
-  return { offlineSigner, CosmWasmClient };
+  // const CosmWasmClient = await SigningCosmWasmClient.connectWithSigner('142.93.213.125:26657', offlineSigner,{
+  //   gasPrice:100000
+  // });
+  let accounts = await offlineSigner.getAccounts();
+  const currentAddress = accounts[0].address;
+  return { currentAddress };
 }
