@@ -11,21 +11,7 @@ const DealsComponent = () => {
   // Call useAllDeals hook directly within the component body
   // Update deals state when response changes
   const { user, response } = useAllDeals();
-  axiosInstance
-  .get('/fetch-deals',{
-    params: {
-      status: 'all'
-    }
-  })
-  .then((res) => {
-    console.log("successfully fetched deals", res);
-    // Handle the response data here
-  })
-  .catch((err) => {
-    console.log("error when fetching deals", err);
-    // Handle errors here
-  });
-
+ 
   useEffect(() => {
     if (response) {
       // console.log(response.deals);

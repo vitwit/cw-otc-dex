@@ -14,6 +14,7 @@ type Deal struct {
 	ID              float64 `json:"id"`
 	Description     string  `json:"description"`
 	Title           string  `json:"title"`
+	
 }
 
 type Response struct {

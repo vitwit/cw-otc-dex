@@ -4,7 +4,6 @@ import axiosInstance from './api/axios'
 import { getOfflineSignerAndCosmWasmClient } from './GetClient'
 import { AppConstants } from './config/constant'
 import { getLatestBlockHeight } from './utils/util'
-
 import toast, { Toaster } from 'react-hot-toast';
 const CreateDeal = () => {
   const formRef = useRef(null)
@@ -133,6 +132,8 @@ const CreateDeal = () => {
 
         const executeMsg = {
           create_deal: {
+            deal_title:dealTitle,
+            deal_description:dealDescription,
             deal_creator: DealCreatorAddress,
             min_cap: minCapacity,
             total_bid: '0',
@@ -174,30 +175,30 @@ const CreateDeal = () => {
         const dealId = dealIdObject ? dealIdObject.value : null
         // toast.success('Deal Created Successfully');
         console.log('deal value:', dealId)
-        axiosInstance
-          .post('/create-deal', {
-            description:dealDescription,
-            title:dealTitle,
-            deal_creator: DealCreatorAddress,
-            min_cap: minCapacity,
-            total_bid: '0',
-            deal_token_denom: tokenName,
-            deal_token_amount: tokenAmount,
-            start_block: start,
-            end_block: end,
-            bid_token: exchangeToken,
-            min_price: minPrice
-          })
-          .then((res) => {
-            console.log("successfully stored",res);
-          })
-          .catch((err) => {
-            console.log("error when stroing into db",err);
-          })
+        // axiosInstance
+        //   .post('/create-deal', {
+        //     description:dealDescription,
+        //     title:dealTitle,
+        //     deal_creator: DealCreatorAddress,
+        //     min_cap: minCapacity,
+        //     total_bid: '0',
+        //     deal_token_denom: tokenName,
+        //     deal_token_amount: tokenAmount,
+        //     start_block: start,
+        //     end_block: end,
+        //     bid_token: exchangeToken,
+        //     min_price: minPrice
+        //   })
+        //   .then((res) => {
+        //     console.log("successfully stored",res);
+        //   })
+        //   .catch((err) => {
+        //     console.log("error when stroing into db",err);
+        //   })
         return Promise.resolve(dealId); 
       } catch (error) {
         console.error('Error executing deal:', error)
-        return Promise.reject(error);
+        return Promise.reject(error.message);
       }
     }
     toast.promise(
