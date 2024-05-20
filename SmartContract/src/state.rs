@@ -40,6 +40,8 @@ pub struct Deal {
     pub bid_token_denom: String,
     //minimum price to place a bid
     pub min_price: Decimal,
+    //deal_status
+    pub deal_status:String,
 }
 
 // DEAL_SEQ holds the last deal ID

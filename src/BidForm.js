@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
-
+import { placeBid } from './contractcalls/placeBid';
 const BidForm = ({ onCancel, onPlaceBid }) => {
   const formRef = useRef(null);
   const [loading, setLoading] = useState(false);
@@ -26,8 +26,16 @@ const BidForm = ({ onCancel, onPlaceBid }) => {
     setLoading(true);
     try {
       console.log(formData);
-      await onPlaceBid(formData); // Pass formData to the onPlaceBid function
-      toast.success('Bid placed successfully!');
+      toast.promise(
+        placeBid(formData),
+         {
+           loading: 'Creating Bid...',
+           success: (response) => <b>Bid Placed Successfully{onPlaceBid()}</b>, // Show the amount value in success message
+           error:(error)=><b>{error}</b>,
+         }
+       );
+      // await onPlaceBid(formData); // Pass formData to the onPlaceBid function
+      // toast.success('Bid placed successfully!');
       formRef.current.reset(); // Reset form fields after successful submission
     } catch (error) {
       toast.error('Error placing bid. Please try again.');

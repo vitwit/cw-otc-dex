@@ -15,8 +15,6 @@ const Header = (props) => {
         })
         const value=localStorage.getItem("walletaddress");
         console.log("hello",value);
-
-
         if(value){
             setUsername(value);       
         }

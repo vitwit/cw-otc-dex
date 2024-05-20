@@ -47,8 +47,9 @@ export const placeBid=async (formData)=>{
           txHash
         )
         console.log("response of hash",response);
-        return response; 
+        return Promise.resolve(response);
       } catch (error) {
         console.error('Error executing bid:', error)
+        return Promise.reject(error.message);
       }
 }

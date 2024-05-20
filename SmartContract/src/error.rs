@@ -15,6 +15,8 @@ pub enum ContractError {
 
     #[error("Deal not existed ")] DealNotExisted {},
 
+    #[error("Deal already Executed ")] DealExecuted {},
+
     #[error("Denom not matched ")] DenomNotMatched {},
 
     #[error("overflow error")] OverflowError {},

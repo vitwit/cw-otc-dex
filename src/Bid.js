@@ -25,13 +25,10 @@ const Bid = () => {
   const toggleBidForm = () =>{
     setShowBidForm(!showBidForm);
   };
-  const handlePlaceBid = async (formData) => {
-    console.log("in bid",formData);
-    const response=await placeBid(formData);
-    console.log("in bid",response);
+  const handlePlaceBid = async () => {
     // Logic to handle placing bid
     // Hide bid form after placing bid
-    // setShowBidForm(false);
+      setShowBidForm(false);
   };
   const handleCancel = () => {
     // Logic to handle canceling bid
