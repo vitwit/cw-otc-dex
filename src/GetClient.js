@@ -79,7 +79,7 @@ export async function getOfflineSignerAndCosmWasmClient() {
         'linear-gradient(180deg, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0) 100%)',
     },
   }
-   window.keplr.experimentalSuggestChain(chain_config);
+  window.keplr.experimentalSuggestChain(chain_config);
   const chainId = AppConstants.CHAIN_ID;
   await window.keplr.enable(chainId);
   const offlineSigner = await window.getOfflineSigner(chainId);

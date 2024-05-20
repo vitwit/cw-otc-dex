@@ -1,5 +1,5 @@
 export const AppConstants = {
-    CONTRACT_ADDRESS: "osmo14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sq2r9g9",
+    CONTRACT_ADDRESS: "osmo1nc5tatafv6eyq7llkr2gv50ff9e22mnf70qgjlv737ktmt4eswrqvlx82r",
     CHAIN_ID: "testnet",
     RPC_URL:"http://142.93.213.125:26657"
 }

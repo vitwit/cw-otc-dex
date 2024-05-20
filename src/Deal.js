@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 import { useParams } from "react-router-dom";
 const Deal = ({ dealId, dealDetails }) => {
     console.log("Component",dealId,dealDetails);
-   
     return ( 
 <>
 <div className="col-span-4 md:col-span-1 bg-white w-full border border-gray-200 rounded-lg p-4 relative ">
@@ -18,7 +17,7 @@ const Deal = ({ dealId, dealDetails }) => {
         </div>
         <Link to={`/bid/${dealId}`} className="text-zinc-700 hover:text-black flex justify-start">
             <h4 className="text-xl font-medium truncate" title="Selling 1,000,000 ATOMs in exchange for USDT">
-                Selling {dealDetails.deal_token_amount}  {dealDetails.deal_token_denom} in exchange for {dealDetails.bid_token_denom}
+               {dealDetails.deal_title}
             </h4>
         </Link>
         <a href="#" className="text-rose-600 hover:text-rose-700 text-xs flex justify-start">
