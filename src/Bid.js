@@ -3,45 +3,121 @@ import Header from './components/Header'
 import { getDeal } from './contractcalls/getdeal'
 import { useState } from 'react'
 import { useEffect } from 'react'
-import { placeBid } from './contractcalls/placeBid'
 import BidForm from './BidForm'
+import toast, { Toaster } from 'react-hot-toast'
+import { getLatestBlockHeight } from './utils/util'
+import { executeDeal } from './contractcalls/executeDeal'
+import { getBidStore } from './contractcalls/getBidStore'
+import BidItem from './ BidItem'
+import ActivityItem from './ActivityItem'
 const Bid = () => {
   const { id } = useParams()
   const [dealData, setdealData] = useState(null)
-  const [showBidForm, setShowBidForm] = useState(false);
+  const [showBidForm, setShowBidForm] = useState(false)
+  const [bidStoreData, setBidStoreData] = useState(null)
+  const [latestBlockHeight, setlatestBlockHeight] = useState(null)
+  const [dealExecuted, setdealExecuted] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [myBids, setMyBids] = useState([])
   useEffect(() => {
     const response = async () => {
       try {
         const result = await getDeal(id)
         // console.log("in bid component ",result);
         setdealData(result.deal)
+        setLoading(false)
       } catch (e) {
         console.log(e.message)
       }
     }
     response()
   }, [dealData])
+  const latestBlockHeightResponse = async () => {
+    try {
+      const result = await getLatestBlockHeight()
+      // console.log("in bid component ",result);
+      //  console.log("latest",result);
+      //  console.log("deallastblock",dealData.end_block);
+      setlatestBlockHeight(result)
+    } catch (e) {
+      console.log(e.message)
+    }
+  }
 
-  const toggleBidForm = () =>{
-    setShowBidForm(!showBidForm);
-  };
+  useEffect(() => {
+    if (dealData) {
+      if (dealData.deal_status == 'Completed') {
+        setdealExecuted('Completed')
+      } else {
+        latestBlockHeightResponse()
+      }
+    }
+  }, [latestBlockHeight, dealData])
+
+  const bidStoreResponse = async () => {
+    try {
+      const bidStoreResult = await getBidStore(id)
+      setBidStoreData(bidStoreResult)
+      console.log('latest bid store', bidStoreResult)
+    } catch (e) {
+      console.log(e.message)
+    }
+  }
+  useEffect(() => {
+    bidStoreResponse()
+  }, [])
+
+  useEffect(() => {
+    const fetchMyBids = async () => {
+      const address = localStorage.getItem('walletaddress')
+      if (address) {
+        // setWalletAddress(address);
+        try {
+          const bidStoreResult = await getBidStore(id)
+          const myBids = bidStoreResult.filter((bid) => bid[1].bidder === address)
+          console.log('my bids', myBids)
+          setMyBids(myBids)
+        } catch (error) {
+          console.error('Error fetching my bids: ', error)
+        }
+      }
+    }
+    fetchMyBids()
+  }, [id])
+  const toggleBidForm = () => {
+    setShowBidForm(!showBidForm)
+  }
+
   const handlePlaceBid = async () => {
-    // Logic to handle placing bid
-    // Hide bid form after placing bid
-      setShowBidForm(false);
-  };
+    setShowBidForm(false)
+  }
   const handleCancel = () => {
-    // Logic to handle canceling bid
-    console.log('Bid canceled!');
+    console.log('Bid canceled!')
     // Hide bid form after canceling bid
-    setShowBidForm(false);
-  };
+    setShowBidForm(false)
+  }
+  const handleBidRemoved = (bidId) => {
+    setMyBids(myBids.filter((bid) => bid.id !== bidId))
+  }
+  const handleDealExecution = () => {
+    toast.promise(executeDeal(id), {
+      loading: 'Executing Deal...',
+      success: (response) => <b>Deal Executed Successfully</b>, // Show the amount value in success message
+      error: (error) => <b>{JSON.stringify(error)}</b>
+    })
+  }
   return (
     <>
       <Header />
-
       <div className="h-20"></div>
-      {showBidForm && <BidForm onCancel={handleCancel} onPlaceBid={handlePlaceBid} />}
+      {showBidForm && (
+        <BidForm
+          onCancel={handleCancel}
+          onPlaceBid={handlePlaceBid}
+          dealData={dealData}
+          dealId={id}
+        />
+      )}
       <main className="px-4 md:px-24 mt-5 md:mt-9 mb-9">
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2 md:col-span-1">
@@ -128,9 +204,32 @@ const Bid = () => {
               </h4>
               <p className="text-gray-600">20% lower than market price</p>
 
-              <button onClick={toggleBidForm} className="mt-4 w-full md:w-2/3 border py-1.5 rounded-xl border border-rose-500 hover:bg-rose-500 text-rose-600 hover:text-white">
-                Place new bid
-              </button>
+              {loading ? (
+                <button
+                  className="mt-4 w-full md:w-2/3 border py-1.5 rounded-xl border border-rose-500 text-rose-600"
+                  disabled
+                >
+                  Loading...
+                </button>
+              ) : dealData && dealExecuted ? (
+                <button className="mt-4 w-full md:w-2/3 border py-1.5 rounded-xl border border-rose-500 hover:bg-rose-500 text-rose-600 hover:text-white">
+                  Deal Executed
+                </button>
+              ) : dealData && latestBlockHeight && latestBlockHeight >= dealData.end_block ? (
+                <button
+                  onClick={handleDealExecution}
+                  className="mt-4 w-full md:w-2/3 border py-1.5 rounded-xl border border-rose-500 hover:bg-rose-500 text-rose-600 hover:text-white"
+                >
+                  Execute Deal
+                </button>
+              ) : (
+                <button
+                  onClick={toggleBidForm}
+                  className="mt-4 w-full md:w-2/3 border py-1.5 rounded-xl border border-rose-500 hover:bg-rose-500 text-rose-600 hover:text-white"
+                >
+                  Place new bid
+                </button>
+              )}
             </div>
 
             <div className="overflow-x-auto border border-gray-300 rounded-lg mt-9 bg-white">
@@ -144,6 +243,27 @@ const Bid = () => {
                   <div className="w-1/3">Amount</div>
                   <div className="w-1/3">Bid price</div>
                   <div className="w-1/3">Actions</div>
+                </div>
+                {/* <div className="border-t border-gray-200">
+                  <div className="bg-white flex justify-between items-center px-6 py-3">
+                    <div className="w-1/3">$1000</div>
+                    <div className="w-1/3">$10.50</div>
+                    <div className="w-1/3">
+                      <button className="px-5 py-1 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-200 flex items-center">
+                        <i className="fa-solid fa-xmark mr-2"></i>
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex px-6 pb-2">
+                    <div className="text-gray-500 flex-grow">
+                      <span>
+                        <i className="fa-regular fa-clock text-xs mr-1"></i>
+                        20 mins ago
+                      </span>
+                      <span className="ml-4 text-blue-600">might not win due to high demand</span>
+                    </div>
+                  </div>
                 </div>
                 <div className="border-t border-gray-200">
                   <div className="bg-white flex justify-between items-center px-6 py-3">
@@ -165,7 +285,23 @@ const Bid = () => {
                       <span className="ml-4 text-blue-600">might not win due to high demand</span>
                     </div>
                   </div>
-                </div>
+                </div> */}
+
+                {myBids.length === 0 ? (
+                  <div class="mx-auto text-center">
+                    <b>No bids placed yet.</b>
+                  </div>
+                ) : (
+                  myBids.map((bid) => (
+                    <BidItem
+                      key={bid[0]}
+                      bid={bid[1]}
+                      bidId={bid[0]}
+                      dealId={id}
+                      onBidRemoved={handleBidRemoved}
+                    />
+                  ))
+                )}
               </div>
             </div>
 
@@ -195,7 +331,14 @@ const Bid = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="bg-white border-b hover:bg-slate-50">
+                 
+
+<ActivityItem></ActivityItem>
+
+<ActivityItem></ActivityItem>
+
+<ActivityItem></ActivityItem>
+                  {/* <tr className="bg-white border-b hover:bg-slate-50">
                     <td className="py-4 px-6">
                       <span className="border border-slate-100 px-3 py-0.5 rounded-lg bg-zinc-200 text-gray-600 font-medium">
                         Bid
@@ -269,11 +412,12 @@ const Bid = () => {
                       </a>
                     </td>
                     <td className="py-4 px-6">3h</td>
-                  </tr>
+                  </tr> */}
                 </tbody>
               </table>
             </div>
           </div>
+          <Toaster />
         </div>
       </main>
     </>

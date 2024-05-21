@@ -1,12 +1,12 @@
 import { getOfflineSignerAndCosmWasmClient } from "../GetClient";
 import { AppConstants } from "../config/constant";
-export const placeBid=async (amount,price,denom,dealId)=>{
+export const executeDeal=async (dealId)=>{
     // const { amount, price, denom } = formData;
     try {
         const { offlineSigner, CosmWasmClient } = await getOfflineSignerAndCosmWasmClient()
         const contractAddress = AppConstants.CONTRACT_ADDRESS
         let accounts = await offlineSigner.getAccounts()
-        const BidderAddress = localStorage.getItem("walletaddress");
+        const ExecutorAddress = localStorage.getItem("walletaddress");
         const defaultFee = {
           amount: [
             {
@@ -16,28 +16,19 @@ export const placeBid=async (amount,price,denom,dealId)=>{
           ],
           gas: '200000'
         }
-       const id=parseInt(dealId)
+        const id=parseInt(dealId)
         const executeMsg = {
-          place_bid: {
-             deal_id:id,
-             bidder: BidderAddress,
-             amount: amount,
-             denom: denom,
-             price: price,
+          execute_deal: {
+             deal_id: id,
           }
         }
-        const total_amount=""+amount*price;
         const executeResponse = await CosmWasmClient.execute(
-          BidderAddress,
+          ExecutorAddress,
           contractAddress,
           executeMsg,
           defaultFee,
-          'Execute place_bid',
+          'Execute execute_deal',
           [
-            {
-              amount:total_amount,
-              denom: denom
-            }
           ]
         )
         console.log('Execute response:', executeResponse)

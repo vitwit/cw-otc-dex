@@ -1,6 +1,10 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{ Coin, Order };
+use std::convert::Into;
+use std::ops::Add;
+use chrono::{NaiveDateTime, DateTime, Utc};
+use cosmwasm_std::{Timestamp};
 use crate::msg::*;
 use cw_storage_plus::Map;
 use cosmwasm_std::coins;
@@ -21,7 +25,6 @@ use cosmwasm_std::{
   Decimal,
   BankMsg,
 };
-use std::ops::Add;
 use cw2::{ get_contract_version, set_contract_version };
 use crate::error::ContractError;
 use crate::state::{ Config, Deal, DEALSTORE, CONFIG, DEALS, DEAL_SEQ, BID_SEQ, Bid, BidStore };
@@ -242,11 +245,16 @@ pub fn execute_place_bid(
   info: MessageInfo,
   msg: PlaceBidMsg
 ) -> Result<Response, ContractError> {
+
+  let timestamp= _env.block.time;
+
+  let seconds: i64 = timestamp.seconds() as i64;
   let bid = Bid {
     bidder: Addr::unchecked(msg.bidder.clone()),
     amount: msg.amount,
     denom: msg.denom.clone(),
     price: msg.price,
+    seconds:seconds,
   };
   if !DEALS.has(deps.storage, msg.deal_id) {
     return Err(ContractError::DealNotExisted {});
@@ -656,12 +664,42 @@ mod tests {
   use cosmwasm_std::BalanceResponse;
   use cosmwasm_std::Querier;
 
-  #[test]
+
+
+  // Online Rust compiler to run Rust program online
+// Print "Try programiz.pro" message
+use chrono::{DateTime, NaiveDateTime, Utc};
+use cosmwasm_std::{Env, StdResult};
+
+fn get_current_date(env: &Env) -> StdResult<String> {
+    // Get the current timest
+    let timestamp= env.block.time;
+
+    let seconds: i64 = timestamp.seconds() as i64;
+
+    // Create a NaiveDateTime from the seconds
+    let naive_datetime = NaiveDateTime::from_timestamp(seconds, 0);
+
+    // Convert NaiveDateTime to DateTime<Utc>
+    let datetime: DateTime<Utc> = DateTime::from_utc(naive_datetime, Utc);
+
+    // Format the DateTime object into a string with the desired format
+    let formatted_date = datetime.format("%Y-%m-%d %H:%M:%S").to_string();
+
+    // Format the DateTime object into a string with the desired format
+    let formatted_date = datetime.format("%Y-%m-%d %H:%M:%S").to_string();
+
+    Ok(formatted_date)
+}
+  #[test]  
   fn test_create_deal() {
+
+  // This is just an example, in a real CosmWasm contract, you would obtain the `Env` from the function parameter
+  
     //  let mut deps = mock_dependencies();
     let mut info = mock_info("sender", &[]);
     let mut deps = mock_dependencies(); // Initialize with empty storage
-
+   
     // Initialize sender and recipient addresses
     let sender_address = Addr::unchecked("sender");
     let fee_collector_address = Addr::unchecked("fee_addr");
@@ -671,6 +709,26 @@ mod tests {
     deps.querier.update_balance(fee_collector_address.clone(), coins(0, "uotc"));
     let mut env = mock_env();
     env.block.height = 0;
+    match get_current_date(&env) {
+      Ok(date) => println!("Current Date: {}", date),
+      Err(err) => eprintln!("Error: {:?}", err),
+  }
+
+    let current_time = env.block.time;
+println!("Current block time: {}", current_time);
+
+
+// let timestamp = env.block.time;
+// let seconds = timestamp.as_nanos() / 1_000_000_000;
+// // Create a DateTime object from the seconds
+// let datetime = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(seconds as i64, 0), Utc);
+
+// // Format the DateTime object into a string with the desired format
+// print!(datetime.format("%Y-%m-%d %H:%M:%S").to_string());
+// println!("time stamp{:?}",timestamp);
+// let naive = NaiveDateTime::from_timestamp(timestamp, 0);
+// let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+// println!("Human-readable time: {}", datetime.format("%Y-%m-%d %H:%M:%S").to_string());
     let value = info.sender.to_string();
     let msg = InstantiateMsg {
       admin: Some(value),
@@ -810,6 +868,7 @@ mod tests {
       amount: Uint128::new(100),
       denom: "bid_token_denom".to_string(),
       price: Decimal::from_ratio(10u128, 2u128),
+      seconds:64,
     };
     bids.push((bid_id, bid_1));
     assert_eq!(bid_store.bids, bids);
@@ -921,6 +980,7 @@ mod tests {
       amount: Uint128::new(100),
       denom: "bid_token_denom".to_string(),
       price: Decimal::from_ratio(10u128, 2u128),
+      seconds:64,
     });
     let place_bid_msg = PlaceBidMsg {
       deal_id: 1u64,

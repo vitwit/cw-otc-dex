@@ -55,6 +55,7 @@ pub struct Bid {
     pub amount: Uint128,
     pub denom: String,
     pub price: Decimal,
+    pub seconds:i64,
 }
 
 //Used to generate unique sequence of  bid numbers
