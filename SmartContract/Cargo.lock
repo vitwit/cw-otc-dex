@@ -271,6 +271,7 @@ dependencies = [
 name = "cw-dotc"
 version = "0.1.0"
 dependencies = [
+ "bumpalo",
  "chrono",
  "cosmwasm-schema",
  "cosmwasm-std",
