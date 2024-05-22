@@ -3,7 +3,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{ Coin, Order };
 use std::convert::Into;
 use std::ops::Add;
-use chrono::{NaiveDateTime, DateTime, Utc};
+// use chrono::{NaiveDateTime, DateTime, Utc};
 use cosmwasm_std::{Timestamp};
 use crate::msg::*;
 use cw_storage_plus::Map;
@@ -666,31 +666,31 @@ mod tests {
 
 
 
-  // Online Rust compiler to run Rust program online
-// Print "Try programiz.pro" message
-use chrono::{DateTime, NaiveDateTime, Utc};
-use cosmwasm_std::{Env, StdResult};
+//   // Online Rust compiler to run Rust program online
+// // Print "Try programiz.pro" message
+// use chrono::{DateTime, NaiveDateTime, Utc};
+// use cosmwasm_std::{Env, StdResult};
 
-fn get_current_date(env: &Env) -> StdResult<String> {
-    // Get the current timest
-    let timestamp= env.block.time;
+// fn get_current_date(env: &Env) -> StdResult<String> {
+//     // Get the current timest
+//     let timestamp= env.block.time;
 
-    let seconds: i64 = timestamp.seconds() as i64;
+//     let seconds: i64 = timestamp.seconds() as i64;
 
-    // Create a NaiveDateTime from the seconds
-    let naive_datetime = NaiveDateTime::from_timestamp(seconds, 0);
+//     // Create a NaiveDateTime from the seconds
+//     let naive_datetime = NaiveDateTime::from_timestamp(seconds, 0);
 
-    // Convert NaiveDateTime to DateTime<Utc>
-    let datetime: DateTime<Utc> = DateTime::from_utc(naive_datetime, Utc);
+//     // Convert NaiveDateTime to DateTime<Utc>
+//     let datetime: DateTime<Utc> = DateTime::from_utc(naive_datetime, Utc);
 
-    // Format the DateTime object into a string with the desired format
-    let formatted_date = datetime.format("%Y-%m-%d %H:%M:%S").to_string();
+//     // Format the DateTime object into a string with the desired format
+//     let formatted_date = datetime.format("%Y-%m-%d %H:%M:%S").to_string();
 
-    // Format the DateTime object into a string with the desired format
-    let formatted_date = datetime.format("%Y-%m-%d %H:%M:%S").to_string();
+//     // Format the DateTime object into a string with the desired format
+//     let formatted_date = datetime.format("%Y-%m-%d %H:%M:%S").to_string();
 
-    Ok(formatted_date)
-}
+//     Ok(formatted_date)
+// }
   #[test]  
   fn test_create_deal() {
 
@@ -709,13 +709,13 @@ fn get_current_date(env: &Env) -> StdResult<String> {
     deps.querier.update_balance(fee_collector_address.clone(), coins(0, "uotc"));
     let mut env = mock_env();
     env.block.height = 0;
-    match get_current_date(&env) {
-      Ok(date) => println!("Current Date: {}", date),
-      Err(err) => eprintln!("Error: {:?}", err),
-  }
+//     match get_current_date(&env) {
+//       Ok(date) => println!("Current Date: {}", date),
+//       Err(err) => eprintln!("Error: {:?}", err),
+//   }
 
-    let current_time = env.block.time;
-println!("Current block time: {}", current_time);
+//     let current_time = env.block.time;
+// println!("Current block time: {}", current_time);
 
 
 // let timestamp = env.block.time;
