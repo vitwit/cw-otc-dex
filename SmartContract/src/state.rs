@@ -1,3 +1,4 @@
+
 use std::collections::HashMap;
 
 use cosmwasm_schema::cw_serde;
@@ -69,3 +70,5 @@ use serde::{ Deserialize, Serialize };
 pub struct BidStore {
     pub bids: Vec<(u64, Bid)>,
 }
+
+

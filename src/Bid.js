@@ -12,78 +12,80 @@ import BidItem from './ BidItem'
 import ActivityItem from './ActivityItem'
 const Bid = () => {
   const { id } = useParams()
-  const [dealData, setdealData] = useState(null)
+  const [dealData, setDealData] = useState(null)
   const [showBidForm, setShowBidForm] = useState(false)
-  const [bidStoreData, setBidStoreData] = useState(null)
-  const [latestBlockHeight, setlatestBlockHeight] = useState(null)
-  const [dealExecuted, setdealExecuted] = useState(null)
+  const [bidStoreData, setBidStoreData] = useState([])
+  const [latestBlockHeight, setLatestBlockHeight] = useState(null)
+  const [dealExecuted, setDealExecuted] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [activityLoading, setActivityLoading] = useState(true)
   const [myBids, setMyBids] = useState([])
+
   useEffect(() => {
-    const response = async () => {
+    const fetchDeal = async () => {
       try {
         const result = await getDeal(id)
-        // console.log("in bid component ",result);
-        setdealData(result.deal)
+        setDealData(result.deal)
         setLoading(false)
       } catch (e) {
         console.log(e.message)
       }
     }
-    response()
-  }, [dealData])
-  const latestBlockHeightResponse = async () => {
-    try {
-      const result = await getLatestBlockHeight()
-      // console.log("in bid component ",result);
-      //  console.log("latest",result);
-      //  console.log("deallastblock",dealData.end_block);
-      setlatestBlockHeight(result)
-    } catch (e) {
-      console.log(e.message)
-    }
-  }
+    fetchDeal()
+  }, [id])
 
   useEffect(() => {
-    if (dealData) {
-      if (dealData.deal_status == 'Completed') {
-        setdealExecuted('Completed')
-      } else {
-        latestBlockHeightResponse()
+    const fetchLatestBlockHeight = async () => {
+      try {
+        const result = await getLatestBlockHeight()
+        setLatestBlockHeight(result)
+      } catch (e) {
+        console.log(e.message)
       }
     }
-  }, [latestBlockHeight, dealData])
 
-  const bidStoreResponse = async () => {
-    try {
-      const bidStoreResult = await getBidStore(id)
-      setBidStoreData(bidStoreResult)
-      console.log('latest bid store', bidStoreResult)
-    } catch (e) {
-      console.log(e.message)
+    if (dealData) {
+      if (dealData.deal_status === 'Completed') {
+        setDealExecuted('Completed')
+      } else {
+        fetchLatestBlockHeight()
+      }
     }
-  }
+  }, [dealData])
+
   useEffect(() => {
-    bidStoreResponse()
-  }, [])
+    const fetchBidStore = async () => {
+      try {
+        const {bids: bidsResponse, error} = await getBidStore(id)
+        console.log("len",bidsResponse.length);
+        if(bidsResponse.length>0){
+          setBidStoreData(bidsResponse)
+          setActivityLoading(false)
+        }
+      } catch (e) {
+        console.log(e.message)
+      }
+    }
+    fetchBidStore()
+  }, [id])
 
   useEffect(() => {
     const fetchMyBids = async () => {
       const address = localStorage.getItem('walletaddress')
       if (address) {
-        // setWalletAddress(address);
         try {
-          const bidStoreResult = await getBidStore(id)
-          const myBids = bidStoreResult.filter((bid) => bid[1].bidder === address)
-          console.log('my bids', myBids)
-          setMyBids(myBids)
+          const {bids: bidsResponse, error} = await getBidStore(id)
+          if(bidsResponse.length>0){
+           const myBids = bidsResponse.filter((bid) => bid[1].bidder === address)
+           setMyBids(myBids)
+          }
         } catch (error) {
           console.error('Error fetching my bids: ', error)
         }
       }
     }
     fetchMyBids()
-  }, [id])
+  }, [dealData])
   const toggleBidForm = () => {
     setShowBidForm(!showBidForm)
   }
@@ -331,13 +333,39 @@ const Bid = () => {
                   </tr>
                 </thead>
                 <tbody>
-                 
-
-<ActivityItem></ActivityItem>
-
-<ActivityItem></ActivityItem>
-
-<ActivityItem></ActivityItem>
+                  {/* {
+                activityLoading ? (
+                  <div class="mx-auto text-center">
+                    <b>Activity Store Loading...</b>
+                  </div>
+                ) :(
+                bidStoreData.length <= 0 ? (
+                  <div class="mx-auto text-center">
+                    <b>No bids placed yet.</b>
+                  </div>
+                ) : (
+                  // <div>Data retrieved</div>
+                  bidStoreData&&bidStoreData.map((bid) => (
+                    <ActivityItem
+                      bid={bid[1]}
+                    />
+                  ))
+                ))} */}
+                {/* {
+                JSON.stringify(bidStoreData)
+                } */}
+                  {activityLoading ? (
+                    <p>Loading activities...</p>
+                  ) : bidStoreData?.length > 0 ? (
+                    bidStoreData?.map((bid, index) => {
+                      console.log('----')
+                      console.log(bid[1])
+                      return <ActivityItem key={index} bid={bid[1]} />
+                    })
+                  ) : (
+                    <p className="text-gray-500 text-sm py-8 text-center">No activities yet.</p>
+                  )}
+                  
                   {/* <tr className="bg-white border-b hover:bg-slate-50">
                     <td className="py-4 px-6">
                       <span className="border border-slate-100 px-3 py-0.5 rounded-lg bg-zinc-200 text-gray-600 font-medium">

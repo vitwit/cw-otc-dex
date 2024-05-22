@@ -51,8 +51,8 @@ cw2 = "1.0.1"
 schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
-wasm-pack = "0.12.1"
-build = "0.0.2"
+
+
 
 [dev-dependencies]
 cw-multi-test = "0.20.0"
