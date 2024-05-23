@@ -10,7 +10,7 @@ export const getAllDeals=async ()=>
           "get_all_deals": {}
         };
         const response = await CosmWasmClient.queryClient.wasm.queryContractSmart(contractAddress, query);
-        console.log("print response",response)
+        // console.log("print response",response)
         return response
     }
     catch(error)

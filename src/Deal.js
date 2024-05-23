@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useParams } from "react-router-dom";
 const Deal = ({ dealId, dealDetails }) => {
-    console.log("Component",dealId,dealDetails);
+    // console.log("Component",dealId,dealDetails);
     return ( 
 <>
 <div className="col-span-4 md:col-span-1 bg-white w-full border border-gray-200 rounded-lg p-4 relative ">

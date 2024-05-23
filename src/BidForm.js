@@ -10,7 +10,10 @@ const BidForm = ({ onCancel, onPlaceBid, dealData,dealId }) => {
     e.preventDefault()
     const formData = Object.fromEntries(new FormData(formRef.current))
     const { amount, price } = formData
-
+    if(!localStorage.getItem('walletaddress')){
+      toast.error('Connect Your Wallet to Place Bid');
+      return
+    }
     // Validate form fields
     if (!amount) {
       toast.error('Enter Amount')

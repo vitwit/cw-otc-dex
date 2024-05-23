@@ -20,12 +20,18 @@ const Bid = () => {
   const [loading, setLoading] = useState(true)
   const [activityLoading, setActivityLoading] = useState(true)
   const [myBids, setMyBids] = useState([])
+  const [expireTime, setExpireTime] = useState(null)
+  const [expireDate, setExpireDate] = useState(null)
+  const [progress, setProgress] = useState(null)
+  const [walletAddress,setWalletAddress]=useState(null)
+  const address = localStorage.getItem('walletaddress')
 
   useEffect(() => {
     const fetchDeal = async () => {
       try {
         const result = await getDeal(id)
         setDealData(result.deal)
+        setActivityLoading(false)
         setLoading(false)
       } catch (e) {
         console.log(e.message)
@@ -34,17 +40,97 @@ const Bid = () => {
     fetchDeal()
   }, [id])
 
+  function formatDuration(seconds) {
+    if (seconds === 0) {
+      return 0
+    }
+
+    const days = Math.floor(seconds / 86400)
+    seconds %= 86400
+    const hours = Math.floor(seconds / 3600)
+    seconds %= 3600
+    const minutes = Math.floor(seconds / 60)
+    seconds %= 60
+
+    let result = ''
+
+    if (days > 0) {
+      result += `${days}d `
+    }
+    if (hours > 0 || days > 0) {
+      // display hours if there are any or if there are days
+      result += `${hours}h `
+    }
+    if (minutes > 0 || hours > 0 || days > 0) {
+      // display minutes if there are any or if there are hours/days
+      result += `${minutes}m `
+    }
+    result += `${seconds}s`
+
+    return result.trim()
+  }
+
+  function addSecondsToCurrentTime(seconds) {
+    const currentDate = new Date()
+    const futureDate = new Date(currentDate.getTime() + seconds * 1000)
+
+    const options = {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+      hour12: true
+    }
+
+    return futureDate.toLocaleString('en-US', options)
+  }
+
   useEffect(() => {
     const fetchLatestBlockHeight = async () => {
       try {
         const result = await getLatestBlockHeight()
         setLatestBlockHeight(result)
+        const value = dealData.end_block - result > 0 ? dealData.end_block - result: 0
+        // console.log('current block', result, 'end_b', dealData.end_block)
+        // console.log('number of blocks left',  dealData.end_block - result )
+        // const expiretime = formatDuration(value * 5) 
+        // // setInterval((myTimer()),1000);
+        // // console.log("expire",expiretime);
+        // setExpireTime(expiretime)
+
+        const secondsToAdd =  (dealData.end_block - result)*5
+        const expiredate = addSecondsToCurrentTime(secondsToAdd)
+        if (expireDate==null) {
+          console.log(expiredate);
+          setExpireDate(expiredate)
+        }
+       
+        const durationInSeconds = value * 5;
+
+        let secondsElapsed = 0;
+        const intervalId = setInterval(() => {
+            if (secondsElapsed >= durationInSeconds) {
+                setExpireTime(0);
+                clearInterval(intervalId);
+            } else {
+                const remainingSeconds = durationInSeconds - secondsElapsed;
+                const formattedDuration = formatDuration(remainingSeconds);
+                setExpireTime(formattedDuration);
+                secondsElapsed++;
+            }
+        }, 1000);
+
+        // Clear interval when component unmounts
+        return () => clearInterval(intervalId);      
       } catch (e) {
         console.log(e.message)
       }
     }
-
     if (dealData) {
+      const progressbar = (dealData.total_bid / dealData.deal_token_amount) * 100
+      setProgress(progressbar)
       if (dealData.deal_status === 'Completed') {
         setDealExecuted('Completed')
       } else {
@@ -56,11 +142,11 @@ const Bid = () => {
   useEffect(() => {
     const fetchBidStore = async () => {
       try {
-        const {bids: bidsResponse, error} = await getBidStore(id)
-        console.log("len",bidsResponse.length);
-        if(bidsResponse.length>0){
+        const { bids: bidsResponse, error } = await getBidStore(id)
+        console.log('len', bidsResponse.length)
+        if (bidsResponse.length > 0) {
           setBidStoreData(bidsResponse)
-          setActivityLoading(false)
+       
         }
       } catch (e) {
         console.log(e.message)
@@ -71,13 +157,16 @@ const Bid = () => {
 
   useEffect(() => {
     const fetchMyBids = async () => {
-      const address = localStorage.getItem('walletaddress')
+      // if(walletAddress!= localStorage.getItem('walletaddress')){
+        const address = localStorage.getItem('walletaddress')
+      //   setWalletAddress(address)
+      // }
       if (address) {
         try {
-          const {bids: bidsResponse, error} = await getBidStore(id)
-          if(bidsResponse.length>0){
-           const myBids = bidsResponse.filter((bid) => bid[1].bidder === address)
-           setMyBids(myBids)
+          const { bids: bidsResponse, error } = await getBidStore(id)
+          if (bidsResponse.length > 0) {
+            const myBids = bidsResponse.filter((bid) => bid[1].bidder === address)
+            setMyBids(myBids)
           }
         } catch (error) {
           console.error('Error fetching my bids: ', error)
@@ -85,7 +174,7 @@ const Bid = () => {
       }
     }
     fetchMyBids()
-  }, [dealData])
+  }, [dealData,address])
   const toggleBidForm = () => {
     setShowBidForm(!showBidForm)
   }
@@ -147,7 +236,7 @@ const Bid = () => {
                 </span>
                 <span className="border border-gray-300 rounded-lg text-sm px-3 py-0.5 mr-1.5 mb-2.5 text-neutral-600 flex items-center">
                   <i className="fa-regular fa-clock text-xs mr-1"></i>
-                  bidding closes in 28d 22h
+                  {expireTime&&expireTime !=0 ? <>bidding closes in {expireTime}</> : <>bidding closed</>}
                 </span>
               </div>
 
@@ -174,10 +263,15 @@ const Bid = () => {
                 <p className="w-1/2 md:w-1/3 font-['Raleway']">Progress</p>
                 <div className="text-gray-600 px-2 md:px-14 w-full font-medium">
                   <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div className="bg-green-500 h-3 rounded-full" style={{ width: '60%' }}></div>
+                    <div
+                      className="bg-green-500 h-3 rounded-full"
+                      style={{ width: `${progress}%` }}
+                    ></div>
                   </div>
                   <span className="text-xs text-gray-600">
-                    Expires in 28d 22h | April 18, 2024 at 4:30 PM
+
+                   {expireTime&&expireTime!=0?<>Expires in {expireTime}</>:<>Expired</>}| {expireDate}
+                    {/* April 18, 2024 at 4:30 PM */}
                   </span>
                 </div>
               </div>
@@ -351,7 +445,7 @@ const Bid = () => {
                     />
                   ))
                 ))} */}
-                {/* {
+                  {/* {
                 JSON.stringify(bidStoreData)
                 } */}
                   {activityLoading ? (
@@ -365,7 +459,7 @@ const Bid = () => {
                   ) : (
                     <p className="text-gray-500 text-sm py-8 text-center">No activities yet.</p>
                   )}
-                  
+
                   {/* <tr className="bg-white border-b hover:bg-slate-50">
                     <td className="py-4 px-6">
                       <span className="border border-slate-100 px-3 py-0.5 rounded-lg bg-zinc-200 text-gray-600 font-medium">
