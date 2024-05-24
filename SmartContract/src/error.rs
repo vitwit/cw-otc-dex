@@ -22,6 +22,8 @@ pub enum ContractError {
 
     #[error("overflow error")] OverflowError {},
 
+    
+
     #[error(
         "Deal Min-cap is not reached,so redistributed all the bids to bidders and deal amount to creator"
     )] MinimumCapacityNotReached {},
@@ -30,7 +32,9 @@ pub enum ContractError {
 
     #[error("Bid id not found")] BidIDNotFound {},
 
-    #[error("Deal is not open for bidding")] DealClosedForBidding {},
+    #[error("Deal is closed for bidding")] DealClosedForBidding {},
+
+    #[error("Deal is not yet open for bidding")] DealNotOpenedForBidding{},
 
     #[error("Deal is Ended,You cannot withdraw your bid")] CannotWithdrawBid {},
 

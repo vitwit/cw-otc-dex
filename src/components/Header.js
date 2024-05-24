@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useEffect } from "react";
 const Header = (props) => {
     const [username,setUsername]=useState(null);
-    //
     useEffect(() => {
 
         window.addEventListener("keplr_keystorechange", async () => {

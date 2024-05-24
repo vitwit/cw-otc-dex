@@ -87,9 +87,9 @@ const CreateDeal = () => {
     const bidStartDateEpoch = Math.floor(dateToEpoch(bidStartDate))
     const bidEndDateEpoch = Math.floor(dateToEpoch(bidEndDate))
     const todayTime = Math.floor(Date.now() / 1000)
-    // console.log('Bid Start Date Epoch:', bidStartDateEpoch)
-    // console.log('Bid End Date Epoch:', bidEndDateEpoch)
-    // console.log('todays time ', todayTime)
+    console.log('Bid Start Date Epoch:', bidStartDateEpoch)
+    console.log('Bid End Date Epoch:', bidEndDateEpoch)
+    console.log('todays time ', todayTime)
     let latestBlockHeight = 0
     try {
       const latest = await getLatestBlockHeight()
@@ -105,7 +105,7 @@ const CreateDeal = () => {
     console.log(latestBlockHeight)
     const startBlock = parseInt(latestBlockHeight) + value
     const endBlock =
-      parseInt(latestBlockHeight) + parseInt(Math.floor((bidEndDateEpoch - todayTime) / 5))
+    parseInt(latestBlockHeight) + parseInt(Math.floor((bidEndDateEpoch - todayTime) / 5))
     const start = new String(startBlock)
     const end = new String(endBlock)
     console.log(startBlock + '---' + endBlock)
@@ -115,6 +115,7 @@ const CreateDeal = () => {
         const error="Connect Your Wallet "
         return Promise.reject(error);
       }
+      formRef.current.reset()
       try {
         const { offlineSigner, CosmWasmClient } = await getOfflineSignerAndCosmWasmClient()
         const contractAddress = AppConstants.CONTRACT_ADDRESS
@@ -210,7 +211,10 @@ const CreateDeal = () => {
        }
      );
   }
-
+  const handleCancel=(e)=>{
+    e.preventDefault();
+    formRef.current.reset()
+  }
   return (
     <>
       <Header />
@@ -369,10 +373,10 @@ const CreateDeal = () => {
             <hr className="border border-gray-100 mt-1 md:mt-3" />
             <div className="p-5 flex">
               <div className="ml-auto">
-                <button className="px-6 py-1.5 rounded-xl border border-gray-200 hover:bg-slate-100 text-black/60 font-medium mr-3 transition-colors duration-200 ease-in-out">
+                <button onClick={handleCancel}className="px-6 py-1.5 rounded-xl border border-gray-200 hover:bg-slate-100 text-black/60 font-medium mr-3 transition-colors duration-200 ease-in-out">
                   Cancel
                 </button>
-                <button className="px-6 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-medium transition-colors duration-200 ease-in-out">
+                <button type="submit" className="px-6 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-medium transition-colors duration-200 ease-in-out">
                   Create deal
                 </button>
               </div>

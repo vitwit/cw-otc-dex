@@ -261,6 +261,11 @@ pub fn execute_place_bid(
     return Err(ContractError::DealNotExisted {});
   }
   let mut deal = DEALS.load(deps.storage, msg.deal_id)?;
+
+   //current height is below the start block
+   if _env.block.height <= (deal.start_block as u64) {
+    return Err(ContractError::DealNotOpenedForBidding{});
+  }
   //current height is already execeded the end block of deal we cannot able to place bid
   if _env.block.height >= (deal.end_block as u64) {
     return Err(ContractError::DealClosedForBidding {});

@@ -1,35 +1,45 @@
-import React from "react";
-import { Link } from "react-router-dom";
-import Deal from "./Deal";
-import { useEffect, useState } from "react";
-import Header from "./components/Header";
-import { useAllDeals } from "./hooks/useAllDeals";
+import React from 'react'
+import { Link } from 'react-router-dom'
+import Deal from './Deal'
+import { useEffect, useState } from 'react'
+import Header from './components/Header'
+import { useAllDeals } from './hooks/useAllDeals'
 import axiosInstance from './api/axios'
+import { getAllDeals } from './contractcalls/getAllDeals'
 const DealsComponent = () => {
-  const [deals, setDeals] = useState(null);
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
+  const [deals, setDeals] = useState(null)
+  const [isWalletConnected, setIsWalletConnected] = useState(false)
   // Call useAllDeals hook directly within the component body
   // Update deals state when response changes
-  const { user, response } = useAllDeals();
- 
+  const { user, response } = useAllDeals()
+  useEffect(() => {
+    const fetchAllDeals = async () => {
+      try {
+        const result = await getAllDeals();
+        console.log("all_deals",result);
+      } catch (e) {
+        console.log(e.message)
+      }
+    }
+    fetchAllDeals()
+  }, [])
+
   useEffect(() => {
     if (response) {
       // console.log(response.deals);
-      setDeals(response.deals);
+      setDeals(response.deals)
     }
-  }, [response]);
+  }, [response])
 
   return (
     <>
       <div>
-        <Header/>
+        <Header />
         <div className="h-20"></div>
 
         <main className="px-4 md:px-24 mt-9 mb-9">
           <div className="flex mb-9">
-            <h3 className="text-3xl font-medium text-black/90 font-['Alata']">
-              Deals
-            </h3>
+            <h3 className="text-3xl font-medium text-black/90 font-['Alata']">Deals</h3>
             <div className="ml-auto">
               <Link
                 to="/create-deal"
@@ -528,11 +538,7 @@ const DealsComponent = () => {
               <>
                 {/* Map over the deals array and render Deal component for each deal */}
                 {deals.map((deal, index) => (
-                  <Deal
-                    dealId={deal[0]}
-                    dealDetails={deal[1]}
-                    key={index}
-                  />
+                  <Deal dealId={deal[0]} dealDetails={deal[1]} key={index} />
                 ))}
               </>
             ) : (
@@ -550,7 +556,7 @@ const DealsComponent = () => {
  `}</style>
       </div>
     </>
-  );
-};
+  )
+}
 
-export default DealsComponent;
+export default DealsComponent
