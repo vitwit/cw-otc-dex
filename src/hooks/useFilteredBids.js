@@ -56,19 +56,12 @@ export function useFilteredBids() {
 
   const removeBid = async (bidId, dealId) => {
     try {
-      // Logic to remove bid using an API call or contract interaction
-      // For example, you can use a function like withdrawBid(bidId, dealId)
-      // and handle the removal in the success callback
       console.log("Removing bid:", bidId, "for deal:", dealId);
-      // await withdrawBid(bidId, dealId);
-
-      // Update the bids state after successful removal
       setBids((prevBids) =>
         prevBids.filter((bid) => bid.bidId !== bidId || bid.dealId !== dealId)
       );
     } catch (error) {
       console.error("Error removing bid:", error);
-      // Handle error state or display a toast message
     }
   };
 

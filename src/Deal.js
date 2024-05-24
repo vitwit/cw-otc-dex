@@ -1,6 +1,33 @@
 import { Link } from "react-router-dom";
 import { useParams } from "react-router-dom";
+import { useState } from "react";
+import { useAllDeals } from "./hooks/useAllDeals";
+
 const Deal = ({ dealId, dealDetails }) => {
+    const { user, response, latestBlockHeight } = useAllDeals();
+    const [setLatestBlockHeight] = useState(null);
+    const [getLatestBlockHeight]= useState(null);
+    const { start_block, end_block, deal_title, deal_creator, deal_token_denom, bid_token_denom, min_cap, total_bid } = dealDetails;
+    console.log("start block for status:",start_block);
+    console.log("current block height for status is:",latestBlockHeight);
+
+   const fetchData = async () => {
+    try {
+      const latestBlock = await getLatestBlockHeight();
+      setLatestBlockHeight(latestBlock);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
+
+  let status = '';
+  if (latestBlockHeight < start_block) {
+    status = 'Upcoming';
+  } else if (start_block <= latestBlockHeight && latestBlockHeight <= end_block) {
+    status = 'Live';
+  } else {
+    status = 'Completed';
+  }
     // console.log("Component",dealId,dealDetails);
     return ( 
 <>
@@ -31,7 +58,7 @@ const Deal = ({ dealId, dealDetails }) => {
                     <div className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></div>
                 </div>
                 <span className="text-green-600 ml-2.5 text-left">
-                Live
+                {status}
                 </span>
             </div>
             <span className="border border-gray-300 rounded-lg text-xs px-3 py-0.5 mr-1.5 text-neutral-600">
@@ -56,7 +83,7 @@ const Deal = ({ dealId, dealDetails }) => {
         <div className="mt-7 grid grid-cols-2 ">
             <div className="flex flex-col ">
                 <p className="text-xs text-gray-500">
-                    Min bid
+                    Min cap
                 </p>
                 <h4 className="text-gray-700 font-medium">
                    {dealDetails.min_cap}
