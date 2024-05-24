@@ -4,9 +4,9 @@ import toast from 'react-hot-toast';
 import { withdrawBid } from './contractcalls/withdrawBid';
 const BidItem = ({ bid,bidId, dealId, onBidRemoved }) => {
 
-  console.log("bid details",bid);
-  console.log("bid Id",bidId);
-  console.log("bid details",dealId);
+  // console.log("bid details",bid);
+  // console.log("bid Id",bidId);
+  // console.log("bid details",dealId);
 
   const handleRemoveBid = async () => {
     try {

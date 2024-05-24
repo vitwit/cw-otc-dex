@@ -10,6 +10,7 @@ import { executeDeal } from './contractcalls/executeDeal'
 import { getBidStore } from './contractcalls/getBidStore'
 import BidItem from './ BidItem'
 import ActivityItem from './ActivityItem'
+import { fetchMarketPrices } from './utils/fetchPrices'
 const Bid = () => {
   const { id } = useParams()
   const [dealData, setDealData] = useState(null)
@@ -25,6 +26,36 @@ const Bid = () => {
   const [progress, setProgress] = useState(null)
   const [walletAddress,setWalletAddress]=useState(null)
   const address = localStorage.getItem('walletaddress')
+
+
+
+  const [marketRate, setMarketRate] = useState(null);
+  const [percentageDifference, setPercentageDifference] = useState(null);
+  const [error, setError] = useState(null);
+
+  const calculateMarketExchangeRate = (dealTokenPrice, bidTokenPrice) => {
+    return dealTokenPrice / bidTokenPrice;
+  };
+  
+  const calculatePercentageDifference = (dealerRate, marketRate) => {
+    return ((dealerRate - marketRate) / marketRate) * 100;
+  };
+  useEffect(() => {
+    const getMarketRates = async () => {
+      try {
+        const prices = await fetchMarketPrices('ATOM', 'OSMO');
+        const marketExchangeRate = calculateMarketExchangeRate(prices.dealTokenPrice, prices.bidTokenPrice);
+        setMarketRate(marketExchangeRate);
+        // console.log("ATOM",prices.dealTokenPrice,"OSMO",prices.bidTokenPrice);
+        const difference = calculatePercentageDifference(dealData.min_price, marketExchangeRate);
+        // console.log("difference",difference);
+        setPercentageDifference(difference);
+      } catch (e) {
+        setError(e.message);
+      }
+    };
+    getMarketRates();
+  }, [dealData]);
 
   useEffect(() => {
     const fetchDeal = async () => {
@@ -165,6 +196,18 @@ const Bid = () => {
         try {
           const { bids: bidsResponse, error } = await getBidStore(id)
           if (bidsResponse.length > 0) {
+            console.log("mine",bidsResponse);
+            const sortedBids = bidsResponse.sort((a, b) => {
+              const priceComparison = parseInt(b[1].price) - parseInt(a[1].price);
+              if (priceComparison !== 0) {
+                return priceComparison;
+              } else {
+                // If prices are equal, sort by bid id
+                return a[0] - b[0];
+              }
+            });
+            
+            console.log("hii",sortedBids);
             const myBids = bidsResponse.filter((bid) => bid[1].bidder === address)
             setMyBids(myBids)
           }
@@ -230,9 +273,9 @@ const Bid = () => {
                   <span className="font-medium ml-2">Live</span>
                 </div>
                 <span className="border border-gray-300 rounded-lg text-sm px-3 py-0.5 mr-1.5 mb-2.5 text-neutral-700 flex items-center">
-                  <i className="fa-solid fa-dollar-sign text-xs mr-1"></i>
+                  <i className="fa-solid fa-dollar-sign text-xs mr-1"></i>   
                   {/* min 1,000 USDT */}
-                  min {dealData && dealData.min_price}
+                  min {dealData && dealData.min_price}{dealData&&dealData.bid_token_denom}
                 </span>
                 <span className="border border-gray-300 rounded-lg text-sm px-3 py-0.5 mr-1.5 mb-2.5 text-neutral-600 flex items-center">
                   <i className="fa-regular fa-clock text-xs mr-1"></i>
@@ -296,9 +339,12 @@ const Bid = () => {
           <div className="col-span-2 md:col-span-1 py-5 md:px-7">
             <div className="px-2 md:px-0">
               <h4 className="text-xl font-medium text-black/80">
-                Average price: 1 ATOM = 11.00 USDT
+                Average price: 1 {dealData&&dealData.deal_token_denom} = {dealData&&dealData.min_price} {dealData&&dealData.bid_token_denom}
               </h4>
-              <p className="text-gray-600">20% lower than market price</p>
+              <p className="text-gray-600">
+              {percentageDifference&&Math.abs(percentageDifference).toFixed(2)}% {percentageDifference > 0 ? 'higher' : 'lower'} than the market rate.
+                {/* 20% lower than market price */}
+                </p>
 
               {loading ? (
                 <button
@@ -452,8 +498,6 @@ const Bid = () => {
                     <p>Loading activities...</p>
                   ) : bidStoreData?.length > 0 ? (
                     bidStoreData?.map((bid, index) => {
-                      console.log('----')
-                      console.log(bid[1])
                       return <ActivityItem key={index} bid={bid[1]} />
                     })
                   ) : (
