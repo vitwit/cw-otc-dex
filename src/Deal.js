@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { useAllDeals } from "./hooks/useAllDeals";
+import icons from './assets/icons.json';
+
 
 const Deal = ({ dealId, dealDetails }) => {
     const { user, response, latestBlockHeight } = useAllDeals();
@@ -10,7 +12,7 @@ const Deal = ({ dealId, dealDetails }) => {
     const { start_block, end_block, deal_title, deal_creator, deal_token_denom, bid_token_denom, min_cap, total_bid } = dealDetails;
     console.log("start block for status:",start_block);
     console.log("current block height for status is:",latestBlockHeight);
-
+     // console.log("Component",dealId,dealDetails);
    const fetchData = async () => {
     try {
       const latestBlock = await getLatestBlockHeight();
@@ -28,17 +30,16 @@ const Deal = ({ dealId, dealDetails }) => {
   } else {
     status = 'Completed';
   }
-    // console.log("Component",dealId,dealDetails);
     return ( 
 <>
 <div className="col-span-4 md:col-span-1 bg-white w-full border border-gray-200 rounded-lg p-4 relative ">
         <div className="flex flex-row mb-1 justify-start">
             <div className="text-xs text-slate-500 mr-3">
-                <i className="fa-solid fa-atom"></i>
+            <img src={icons[deal_token_denom]} alt={deal_token_denom} className="inline-block w-4 h-4 mr-1" />
                 {dealDetails.deal_token_denom}
             </div>
             <div className="text-xs text-slate-500 mr-3">
-                <i className="fa-solid fa-dollar-sign"></i>
+            <img src={icons[bid_token_denom]} alt={bid_token_denom} className="inline-block w-4 h-4 mr-1" />
                 {dealDetails.bid_token_denom}
             </div>
         </div>
