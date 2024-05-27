@@ -2,8 +2,14 @@
 import React from 'react';
 import toast from 'react-hot-toast';
 import { withdrawBid } from './contractcalls/withdrawBid';
-const BidItem = ({ bid,bidId, dealId, onBidRemoved }) => {
+import moment from 'moment';
 
+const calculateTimeAgo = (timestampInNanoSeconds) => {
+  const timestampInMilliseconds = timestampInNanoSeconds *1000;
+  return moment(timestampInMilliseconds).fromNow();
+};
+const BidItem = ({ bid,bidId, dealId, onBidRemoved,isWinning}) => {
+  const timeAgo = calculateTimeAgo(bid.seconds);
   // console.log("bid details",bid);
   // console.log("bid Id",bidId);
   // console.log("bid details",dealId);
@@ -38,7 +44,7 @@ const BidItem = ({ bid,bidId, dealId, onBidRemoved }) => {
             className="px-5 py-1 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-200 flex items-center"
           >
             <i className="fa-solid fa-xmark mr-2"></i>
-            Remove
+            Withdraw
           </button>
         </div>
       </div>
@@ -46,9 +52,15 @@ const BidItem = ({ bid,bidId, dealId, onBidRemoved }) => {
         <div className="text-gray-500 flex-grow">
           <span>
             <i className="fa-regular fa-clock text-xs mr-1"></i>
-            20 mins ago
+            {/* 20 mins ago */}
+            {timeAgo}
+            {/* {new Date(bid.seconds * 1000).toLocaleTimeString()} */}
           </span>
-          <span className="ml-4 text-blue-600">might not win due to high demand</span>
+          
+          <span className="ml-4 text-blue-600">
+            {/* might not win due to high demand */}
+            {isWinning ? 'You might win' : 'You might not win due to high demand'}
+            </span>
         </div>
       </div>
     </div>
