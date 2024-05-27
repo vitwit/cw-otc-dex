@@ -3,24 +3,133 @@ import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { useAllDeals } from "./hooks/useAllDeals";
 import icons from './assets/icons.json';
-
-
+import moment from "moment";
+import { useEffect } from "react";
+import { getLatestBlockHeight } from "./utils/util";
 const Deal = ({ dealId, dealDetails }) => {
-    const { user, response, latestBlockHeight } = useAllDeals();
-    const [setLatestBlockHeight] = useState(null);
-    const [getLatestBlockHeight]= useState(null);
+    const { user, response, latestblockHeight } = useAllDeals();
+    const [latestBlockHeight, setLatestBlockHeight] = useState(null)
+    // const [setLatestBlockHeight] = useState(null);
+    // const [getLatestBlockHeight]= useState(null);
+    const [expireTime, setExpireTime] = useState(null)
+    const [expireDate, setExpireDate] = useState(null)
+    const [progress, setProgress] = useState(null)
     const { start_block, end_block, deal_title, deal_creator, deal_token_denom, bid_token_denom, min_cap, total_bid } = dealDetails;
-    console.log("start block for status:",start_block);
-    console.log("current block height for status is:",latestBlockHeight);
+    // console.log("start block for status:",start_block);
+    // console.log("current block height for status is:",latestBlockHeight);
      // console.log("Component",dealId,dealDetails);
-   const fetchData = async () => {
-    try {
-      const latestBlock = await getLatestBlockHeight();
-      setLatestBlockHeight(latestBlock);
-    } catch (error) {
-      console.error('Error fetching data:', error);
+//    const fetchData = async () => {
+//     try {
+//     //   const latestBlockHeight = await getLatestBlockHeight();
+//     //   setLatestBlockHeight(latestBlockHeight);
+//       if (latestBlockHeight !== null && dealDetails.end_block !== null) {
+
+//         const remainingSeconds = (dealDetails.end_block - latestBlockHeight) * 5;
+//         console.log("rem",remainingSeconds)
+//         if (remainingSeconds <= 0) {
+//           // Deal has expired
+//           setExpireTime(0);
+//           setExpireDate(moment().subtract(-remainingSeconds, 'seconds').format('MMMM D, YYYY [at] h:mm:ss A'));
+//         } else {
+//           const daysLeft = Math.floor(remainingSeconds / (3600 * 24));
+//           const hoursLeft = Math.floor((remainingSeconds % (3600 * 24)) / 3600);
+  
+//           if (daysLeft > 0) {
+//             setExpireTime(`${daysLeft} day${daysLeft > 1 ? 's' : ''}`);
+//           } else if (hoursLeft === 1) {
+//             // Start countdown timer
+//             const interval = setInterval(() => {
+//               setExpireTime(`${hoursLeft} hours`);
+//               remainingSeconds -= 1;
+//               if (remainingSeconds <= 0) {
+//                 clearInterval(interval);
+//                 setExpireTime('Expired');
+//               }
+//             }, 1000);
+//           }
+  
+//           const expirationDate = moment().add(remainingSeconds, 'seconds');
+//           setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm:ss A'));
+//         }
+//       }
+//     } catch (error) {
+//         console.error('Error fetching data:', error);
+//     }
+// };
+// // fetchData()
+
+  useEffect(() => {
+    const fetchLatestBlockHeight = async () => {
+      try {
+        const latestBlockHeight = await getLatestBlockHeight()
+        setLatestBlockHeight(latestBlockHeight);
+    
+        if (latestBlockHeight !== null && dealDetails.end_block !== null) {
+
+          const remainingSeconds = (dealDetails.end_block - latestBlockHeight) * 5;
+    
+          if (remainingSeconds <= 0) {
+            // Deal has expired
+            setExpireTime(0);
+            setExpireDate(moment().subtract(-remainingSeconds, 'seconds').format('MMMM D, YYYY [at] h:mm:ss A'));
+          } else {
+            const daysLeft = Math.floor(remainingSeconds / (3600 * 24));
+            const hoursLeft = Math.floor((remainingSeconds % (3600 * 24)) / 3600);
+    
+            if (daysLeft > 0) {
+              setExpireTime(`${daysLeft} day${daysLeft > 1 ? 's' : ''}`);
+            } else if (hoursLeft === 1) {
+              const interval = setInterval(() => {
+                setExpireTime(`${hoursLeft} hours`);
+                remainingSeconds -= 1;
+                if (remainingSeconds <= 0) {
+                  clearInterval(interval);
+                  setExpireTime('Expired');
+                }
+              }, 1000);
+            }
+    
+            const expirationDate = moment().add(remainingSeconds, 'seconds');
+            setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm:ss A'));
+          }
+        }
+        // setLatestBlockHeight(result)
+        // const value = dealDetails.end_block - result > 0 ? dealDetails.end_block - result: 0
+        // const secondsToAdd =  (dealDetails.end_block - result)*5
+        // const {absoluteTime,relativeTime}= calculateExpiration(secondsToAdd);
+        // const expiredate = addSecondsToCurrentTime(secondsToAdd)
+        // if (expireDate==null) {
+        //   setExpireDate(absoluteTime)
+        // }
+       
+        // const durationInSeconds = value * 5;
+
+        // let secondsElapsed = 0;
+        // const intervalId = setInterval(() => {
+        //     if (secondsElapsed >= durationInSeconds) {
+        //         setExpireTime(0);
+        //         clearInterval(intervalId);
+        //     } else {
+        //         const remainingSeconds = durationInSeconds - secondsElapsed;
+        //         const formattedDuration = formatDuration(remainingSeconds);
+        //         setExpireTime(formattedDuration);
+        //         secondsElapsed++;
+        //     }
+        // }, 1000);
+
+        // Clear interval when component unmounts
+        // return () => clearInterval(intervalId);      
+      } catch (e) {
+        console.log(e.message)
+      }
     }
-  };
+    if (dealDetails) {
+      const progressbar = (dealDetails.total_bid / dealDetails.deal_token_amount) * 100
+    setProgress(progressbar)
+
+      fetchLatestBlockHeight()
+    }
+  }, [dealDetails])
 
   let status = '';
   if (latestBlockHeight < start_block) {
@@ -62,9 +171,10 @@ const Deal = ({ dealId, dealDetails }) => {
                 {status}
                 </span>
             </div>
-            <span className="border border-gray-300 rounded-lg text-xs px-3 py-0.5 mr-1.5 text-neutral-600">
-                bidding closes in 1hr
-            </span>
+            <span className="border border-gray-300 rounded-lg text-sm px-3 py-0.5 mr-1.5 mb-2.5 text-neutral-600 flex items-center">
+                  <i className="fa-regular fa-clock text-xs mr-1"></i>
+                  {dealDetails&&expireTime&&expireTime !=0 ? <>bidding closes in {expireTime}</> : <>bidding closed</>}
+                </span>
         </div>
 
         <div className="mt-6">
@@ -73,11 +183,11 @@ const Deal = ({ dealId, dealDetails }) => {
                     Deal subscription 
                 </p>
                 <p className="ml-auto text-sm text-gray-500">
-                    0%
+                    {progress>=100?<>100</>:progress}%
                 </p>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-blue-500 h-2 rounded-full" style={{width: '0%'}}></div>
+                <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${progress}%` }}></div>
             </div>
         </div>
         
