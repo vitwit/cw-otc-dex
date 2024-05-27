@@ -11,7 +11,7 @@ import { getBidStore } from './contractcalls/getBidStore'
 import BidItem from './ BidItem'
 import ActivityItem from './ActivityItem'
 import { fetchMarketPrices } from './utils/fetchPrices'
-
+import icons from './assets/icons.json';
 import moment from 'moment';
 
 const Bid = () => {
@@ -344,7 +344,8 @@ const Bid = () => {
                   <span className="font-medium ml-2">Live</span>
                 </div> */}
                 <span className="border border-gray-300 rounded-lg text-sm px-3 py-0.5 mr-1.5 mb-2.5 text-neutral-700 flex items-center">
-                  <i className="fa-solid fa-dollar-sign text-xs mr-1"></i>   
+                  {/* <i className="fa-solid fa-dollar-sign text-xs mr-1"></i>   */}
+                  <img src={icons[dealData&&dealData.bid_token_denom]} alt={dealData&&dealData.bid_token_denom} className="inline-block w-4 h-4 mr-1" /> 
                   {/* min 1,000 USDT */}
                   min {dealData && dealData.min_price}{dealData&&dealData.bid_token_denom}
                 </span>
