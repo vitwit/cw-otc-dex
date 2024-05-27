@@ -11,6 +11,9 @@ import { getBidStore } from './contractcalls/getBidStore'
 import BidItem from './ BidItem'
 import ActivityItem from './ActivityItem'
 import { fetchMarketPrices } from './utils/fetchPrices'
+
+import moment from 'moment';
+
 const Bid = () => {
   const { id } = useParams()
   const [dealData, setDealData] = useState(null)
@@ -24,7 +27,10 @@ const Bid = () => {
   const [expireTime, setExpireTime] = useState(null)
   const [expireDate, setExpireDate] = useState(null)
   const [progress, setProgress] = useState(null)
+  const [isLive,setIsLive]=useState(false)
   const [walletAddress,setWalletAddress]=useState(null)
+  const [bidStatusMap,setBidStatusMap]=useState(null)
+  const [expectedResult,setExpectedResult]=useState(null)
   const address = localStorage.getItem('walletaddress')
 
 
@@ -121,52 +127,86 @@ const Bid = () => {
   useEffect(() => {
     const fetchLatestBlockHeight = async () => {
       try {
-        const result = await getLatestBlockHeight()
-        setLatestBlockHeight(result)
-        const value = dealData.end_block - result > 0 ? dealData.end_block - result: 0
-        // console.log('current block', result, 'end_b', dealData.end_block)
-        // console.log('number of blocks left',  dealData.end_block - result )
-        // const expiretime = formatDuration(value * 5) 
-        // // setInterval((myTimer()),1000);
-        // // console.log("expire",expiretime);
-        // setExpireTime(expiretime)
-
-        const secondsToAdd =  (dealData.end_block - result)*5
-        const expiredate = addSecondsToCurrentTime(secondsToAdd)
-        if (expireDate==null) {
-          console.log(expiredate);
-          setExpireDate(expiredate)
+        const latestBlockHeight = await getLatestBlockHeight()
+        setLatestBlockHeight(latestBlockHeight);
+        if(latestBlockHeight>=dealData.end_block){
+          setIsLive(false);
+        }else if(latestBlockHeight<=dealData.start_block){
+          setIsLive(false)
+        }else{
+          setIsLive(true)
         }
-       
-        const durationInSeconds = value * 5;
 
-        let secondsElapsed = 0;
-        const intervalId = setInterval(() => {
-            if (secondsElapsed >= durationInSeconds) {
-                setExpireTime(0);
-                clearInterval(intervalId);
-            } else {
-                const remainingSeconds = durationInSeconds - secondsElapsed;
-                const formattedDuration = formatDuration(remainingSeconds);
-                setExpireTime(formattedDuration);
-                secondsElapsed++;
+        if (latestBlockHeight !== null && dealData.end_block !== null) {
+
+          const remainingSeconds = (dealData.end_block - latestBlockHeight) * 5;
+    
+          if (remainingSeconds <= 0) {
+            // Deal has expired
+            setExpireTime(0);
+            setExpireDate(moment().subtract(-remainingSeconds, 'seconds').format('MMMM D, YYYY [at] h:mm:ss A'));
+          } else {
+            const daysLeft = Math.floor(remainingSeconds / (3600 * 24));
+            const hoursLeft = Math.floor((remainingSeconds % (3600 * 24)) / 3600);
+    
+            if (daysLeft > 0) {
+              setExpireTime(`${daysLeft} day${daysLeft > 1 ? 's' : ''}`);
+            } else if (hoursLeft === 1) {
+              // Start countdown timer
+              const interval = setInterval(() => {
+                setExpireTime(`${hoursLeft} hours`);
+                remainingSeconds -= 1;
+                if (remainingSeconds <= 0) {
+                  clearInterval(interval);
+                  setExpireTime('Expired');
+                }
+              }, 1000);
             }
-        }, 1000);
+    
+            const expirationDate = moment().add(remainingSeconds, 'seconds');
+            setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm:ss A'));
+          }
+        }
+        // setLatestBlockHeight(result)
+        // const value = dealData.end_block - result > 0 ? dealData.end_block - result: 0
+        // const secondsToAdd =  (dealData.end_block - result)*5
+        // const {absoluteTime,relativeTime}= calculateExpiration(secondsToAdd);
+        // const expiredate = addSecondsToCurrentTime(secondsToAdd)
+        // if (expireDate==null) {
+        //   setExpireDate(absoluteTime)
+        // }
+       
+        // const durationInSeconds = value * 5;
+
+        // let secondsElapsed = 0;
+        // const intervalId = setInterval(() => {
+        //     if (secondsElapsed >= durationInSeconds) {
+        //         setExpireTime(0);
+        //         clearInterval(intervalId);
+        //     } else {
+        //         const remainingSeconds = durationInSeconds - secondsElapsed;
+        //         const formattedDuration = formatDuration(remainingSeconds);
+        //         setExpireTime(formattedDuration);
+        //         secondsElapsed++;
+        //     }
+        // }, 1000);
 
         // Clear interval when component unmounts
-        return () => clearInterval(intervalId);      
+        // return () => clearInterval(intervalId);      
       } catch (e) {
         console.log(e.message)
       }
     }
     if (dealData) {
+      if(parseInt(dealData.total_bid)>=parseInt(dealData.min_cap)){
+        setExpectedResult(true);
+      }
       const progressbar = (dealData.total_bid / dealData.deal_token_amount) * 100
       setProgress(progressbar)
       if (dealData.deal_status === 'Completed') {
         setDealExecuted('Completed')
-      } else {
-        fetchLatestBlockHeight()
       }
+      fetchLatestBlockHeight()
     }
   }, [dealData])
 
@@ -195,7 +235,7 @@ const Bid = () => {
       if (address) {
         try {
           const { bids: bidsResponse, error } = await getBidStore(id)
-          if (bidsResponse.length > 0) {
+          if (dealData&&bidsResponse.length > 0) {
             console.log("mine",bidsResponse);
             const sortedBids = bidsResponse.sort((a, b) => {
               const priceComparison = parseInt(b[1].price) - parseInt(a[1].price);
@@ -208,8 +248,22 @@ const Bid = () => {
             });
             
             console.log("hii",sortedBids);
+
+            let cumulativeAmount = 0;
+            const dealAmount = dealData.deal_token_amount; // Set your deal amount here
+          
+            // Create a map to store the bid ID and a boolean value
+            const bidStatusMap = new Map();
+            // Iterate through the sorted bids to calculate the cumulative amount
+            sortedBids.forEach((bid) => {
+              cumulativeAmount += parseInt(bid[1].amount);
+              const isWinning = cumulativeAmount <= dealAmount;
+              bidStatusMap.set(bid[0], isWinning);
+            });
+            console.log("Bid Status Map:", bidStatusMap);
             const myBids = bidsResponse.filter((bid) => bid[1].bidder === address)
             setMyBids(myBids)
+            setBidStatusMap(bidStatusMap);
           }
         } catch (error) {
           console.error('Error fetching my bids: ', error)
@@ -232,6 +286,11 @@ const Bid = () => {
   }
   const handleBidRemoved = (bidId) => {
     setMyBids(myBids.filter((bid) => bid.id !== bidId))
+    setBidStatusMap((prevMap) => {
+      const newMap = new Map(prevMap);
+      newMap.delete(bidId);
+      return newMap;
+    });
   }
   const handleDealExecution = () => {
     toast.promise(executeDeal(id), {
@@ -265,13 +324,25 @@ const Bid = () => {
               </h4>
 
               <div className="mt-2 flex flex-wrap">
-                <div className="inline-flex items-center justify-center text-green-600 rounded text-sm mr-2.5 mb-2.5">
+
+              {isLive && (
+  <div className="inline-flex items-center justify-center text-green-600 rounded text-sm mr-2.5 mb-2.5">
+    <div className="relative flex items-center justify-center">
+      <div className="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-green-400 opacity-75"></div>
+      <div className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></div>
+    </div>
+    <span className="font-medium ml-2">Live</span>
+  </div>
+)}
+
+                {/* <div className="inline-flex items-center justify-center text-green-600 rounded text-sm mr-2.5 mb-2.5">
                   <div className="relative flex items-center justify-center">
+                  
                     <div className="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-green-400 opacity-75"></div>
                     <div className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></div>
                   </div>
                   <span className="font-medium ml-2">Live</span>
-                </div>
+                </div> */}
                 <span className="border border-gray-300 rounded-lg text-sm px-3 py-0.5 mr-1.5 mb-2.5 text-neutral-700 flex items-center">
                   <i className="fa-solid fa-dollar-sign text-xs mr-1"></i>   
                   {/* min 1,000 USDT */}
@@ -289,11 +360,17 @@ const Bid = () => {
               </p>
 
               <div className="w-full mt-9 flex items-center">
-                <p className="w-1/2 md:w-1/3 font-['Raleway']">Expected result</p>
+                {/* <p className="w-1/2 md:w-1/3 font-['Raleway']">Expected result</p>
                 <div className="text-green-600  rounded-lg font-medium">
                   <i className="fas fa-check-circle mr-1" />
                   will be executed
-                </div>
+                </div> */}
+
+                <p className="w-1/2 md:w-1/3 font-['Raleway']">Expected result</p>
+<div className="text-green-600 rounded-lg font-medium">
+  <i className={dealData&&expectedResult ? "fas fa-check-circle mr-1" : "fas fa-times-circle mr-1"} />
+  {dealData&&expectedResult ? "will be executed" : "will not be executed"}
+</div>
               </div>
               <div className="w-full mt-5 flex items-center">
                 <p className="w-1/2 md:w-1/3 font-['Raleway']">Turnout/mincap</p>
@@ -430,9 +507,10 @@ const Bid = () => {
                 </div> */}
 
                 {myBids.length === 0 ? (
-                  <div class="mx-auto text-center">
-                    <b>No bids placed yet.</b>
-                  </div>
+                
+                       <p className="text-gray-500 text-sm py-8 text-center">No bids placed yet.</p>
+            
+                
                 ) : (
                   myBids.map((bid) => (
                     <BidItem
@@ -441,6 +519,7 @@ const Bid = () => {
                       bidId={bid[0]}
                       dealId={id}
                       onBidRemoved={handleBidRemoved}
+                      isWinning={bidStatusMap.get(bid[0])}
                     />
                   ))
                 )}
