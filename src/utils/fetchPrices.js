@@ -236,7 +236,6 @@ const symbolToId = {
 export const fetchMarketPrices = async (dealToken, bidToken) => {
     const dealTokenId = symbolToId[dealToken];
     const bidTokenId = symbolToId[bidToken];
-  
     if (!dealTokenId || !bidTokenId) {
       throw new Error('Invalid token symbol');
     }
