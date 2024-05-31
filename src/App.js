@@ -6,6 +6,7 @@ import DealsComponent from './DealsComponent';
 import CreateDeal from './CreateDeal';
 import Profile from './Profile';
 import Bid from './Bid';
+import './styles.css';
 import SetUpNodeLocal from './SetUpNodeLocal';
 import GetBalance from './GetBalance';
 function App() {

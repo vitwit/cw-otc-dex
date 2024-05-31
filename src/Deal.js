@@ -21,7 +21,7 @@ const Deal = ({ dealId, dealDetails }) => {
       console.error('Error fetching data:', error);
     }
   };
-
+   
   let status = '';
   if (latestBlockHeight < start_block) {
     status = 'Upcoming';
