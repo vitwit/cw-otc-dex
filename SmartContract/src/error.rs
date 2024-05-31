@@ -22,11 +22,9 @@ pub enum ContractError {
 
     #[error("overflow error")] OverflowError {},
 
-    
-
     #[error(
-        "Deal Min-cap is not reached,so redistributed all the bids to bidders and deal amount to creator"
-    )] MinimumCapacityNotReached {},
+    "Deal Min-cap is not reached,so redistributed all the bids to bidders and deal amount to creator"
+ )] MinimumCapacityNotReached {},
 
     #[error("no bidstore found")] BidStoreNotFound {},
 

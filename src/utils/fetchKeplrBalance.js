@@ -1,11 +1,11 @@
 import { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
-export async function getUser() {
-
-  const chain_config={
-    chainId: 'testnet',
+import { AppConstants } from "../config/constant";
+export async function getUserBalancebyDenom(address,denom,decimal) {
+  const chain_config = {
+    chainId: AppConstants.CHAIN_ID,  
     chainName: 'otc',
     rest: 'http://142.93.213.125:1317',
-    rpc: 'http://142.93.213.125:26657',
+    rpc: AppConstants.RPC_URL,
     currencies: [
       {
         coinDenom: 'STAKE',
@@ -80,14 +80,19 @@ export async function getUser() {
     },
   }
   window.keplr.experimentalSuggestChain(chain_config);
-  const chainId='testnet';
+  const chainId = AppConstants.CHAIN_ID;
   await window.keplr.enable(chainId);
   const offlineSigner = await window.getOfflineSigner(chainId);
-  // const CosmWasmClient = await SigningCosmWasmClient.connectWithSigner('142.93.213.125:26657', offlineSigner,{
-  //   gasPrice:100000
-  // });
-  let accounts = await offlineSigner.getAccounts();
-  const currentAddress = accounts[0].address;
- 
-  return { currentAddress };
+  const CosmWasmClient = await SigningCosmWasmClient.connectWithSigner(AppConstants.RPC_URL, offlineSigner, {
+    gasPrice: 100000,
+  });
+  const balance = await CosmWasmClient.getBalance(address, denom);
+  const amount = parseInt(balance.amount, 10);
+
+  // Divide by 10^decimal to get the amount in the proper denomination
+  const amountInProperDenom = amount / Math.pow(10, decimal);
+
+  // Format the result to include numbers after the decimal
+  const formattedAmount = amountInProperDenom.toFixed(decimal);
+  return {balance:formattedAmount};
 }
