@@ -13,7 +13,7 @@ import ActivityItem from './ActivityItem'
 import { fetchMarketPrices } from './utils/fetchPrices'
 import icons from './assets/icons.json';
 import moment from 'moment';
-
+ var interval
 const Bid = () => {
   const { id } = useParams()
   const [dealData, setDealData] = useState(null)
@@ -153,7 +153,11 @@ const Bid = () => {
               setExpireTime(`${daysLeft} day${daysLeft > 1 ? 's' : ''}`);
             } else if (hoursLeft === 1) {
               // Start countdown timer
-              const interval = setInterval(() => {
+
+              if(interval){
+                clearInterval(interval)
+              }
+               interval = setInterval(() => {
                 setExpireTime(`${hoursLeft} hours`);
                 remainingSeconds -= 1;
                 if (remainingSeconds <= 0) {
@@ -464,49 +468,6 @@ const Bid = () => {
                   <div className="w-1/3">Bid price</div>
                   <div className="w-1/3">Actions</div>
                 </div>
-                {/* <div className="border-t border-gray-200">
-                  <div className="bg-white flex justify-between items-center px-6 py-3">
-                    <div className="w-1/3">$1000</div>
-                    <div className="w-1/3">$10.50</div>
-                    <div className="w-1/3">
-                      <button className="px-5 py-1 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-200 flex items-center">
-                        <i className="fa-solid fa-xmark mr-2"></i>
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex px-6 pb-2">
-                    <div className="text-gray-500 flex-grow">
-                      <span>
-                        <i className="fa-regular fa-clock text-xs mr-1"></i>
-                        20 mins ago
-                      </span>
-                      <span className="ml-4 text-blue-600">might not win due to high demand</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="border-t border-gray-200">
-                  <div className="bg-white flex justify-between items-center px-6 py-3">
-                    <div className="w-1/3">$1000</div>
-                    <div className="w-1/3">$10.50</div>
-                    <div className="w-1/3">
-                      <button className="px-5 py-1 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-200 flex items-center">
-                        <i className="fa-solid fa-xmark mr-2"></i>
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex px-6 pb-2">
-                    <div className="text-gray-500 flex-grow">
-                      <span>
-                        <i className="fa-regular fa-clock text-xs mr-1"></i>
-                        20 mins ago
-                      </span>
-                      <span className="ml-4 text-blue-600">might not win due to high demand</span>
-                    </div>
-                  </div>
-                </div> */}
-
                 {myBids.length === 0 ? (
                 
                        <p className="text-gray-500 text-sm py-8 text-center">No bids placed yet.</p>

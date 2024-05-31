@@ -39,6 +39,7 @@ export function useFilteredBids() {
                 dealDetails: deal[1],
                 amount: bid[1].amount,
                 bidPrice: bid[1].price,
+                bidDenom: bid[1].denom,
               }));
             allBids = allBids.concat(filteredBids);
           }

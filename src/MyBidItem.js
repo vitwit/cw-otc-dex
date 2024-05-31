@@ -1,65 +1,16 @@
-// import React from "react";
-// import toast from 'react-hot-toast';
-// import { withdrawBid } from './contractcalls/withdrawBid';
-// import { Link } from "react-router-dom";
-
-// const MyBidItem = ({ bid, bidId, dealId, onBidRemoved }) => {
-// const handleRemoveBid = async () => {
-//     try {
-//         toast.promise(
-//             withdrawBid(bidId, dealId), //(formData),
-//             {
-//               loading: 'Withdrawing Bid...',
-//               success: (response) => <b>Withdrawn Successfully</b>, // Show the amount value in success message
-//               error: (error) => <b>{JSON.stringify(error)}</b>
-//             }
-//           )
-//     //   await withdrawBid(bidId, dealId);
-//     //   toast.success('Bid removed successfully');
-//       onBidRemoved(bidId); // Notify parent to remove the bid from the state
-//     } catch (error) {
-//       console.error("Error removing bid: ", error);
-//       toast.error('Error removing bid');
-//     }
-//   };
-
-//   return (
-//     <div className="flex justify-between px-6 py-5">
-//       <div className="w-1/5">{dealId}</div>
-//       <div className="w-1/5">{bid.dealDetails}</div>
-//       <div className="w-1/5">{bid.amount}</div>
-//       <div className="w-1/5">{bid.bidPrice}</div>
-//       {/* <div className="w-1/5">
-//         <Link to={`/deal/${dealId}`}>View</Link>
-//         <button onClick={handleRemove}>Remove</button>
-//   </div> */}
-
-//           <div className="w-1/5">
-//           <button
-//             onClick={handleRemoveBid}
-//             className="px-5 py-1 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-200 flex items-center"
-//           >
-//             <i className="fa-solid fa-xmark mr-2"></i>
-//             Remove
-//           </button>
-//         </div>
-//     </div>
-//   );
-// };
-
-// export default MyBidItem;
-
-
-
 import React from "react";
 import toast from 'react-hot-toast';
 import { withdrawBid } from './contractcalls/withdrawBid';
 import { Link } from "react-router-dom";
+import icons from './assets/icons.json';
+import Deal from "./Deal";
 
-const MyBidItem = ({dealTitle,bidAmount, bidId,bidPrice, dealId, onBidRemoved }) => {
+const MyBidItem = ({dealTitle,bidAmount, bidId,bidPrice, dealId, onBidRemoved ,bid_token_denom,deal_token_denom}) => {
     // console.log("bid is:",bid);
     console.log("bidId is:",bidId);
     console.log("dealId is:",dealId);
+    //console.log("dealdetails:",dealDetails);
+    //console.log("dealtoken denom is:",dealDetails.deal_token_denom)
   const handleRemoveBid = async () => {
     try {
       toast.promise(
@@ -76,24 +27,27 @@ const MyBidItem = ({dealTitle,bidAmount, bidId,bidPrice, dealId, onBidRemoved })
       toast.error('Error removing bid');
     }
   };
-
-//   const { dealDetails } = bid;
-  
   return (
     <div className="flex px-6 py-5">
-      <div className="w-1/5">{dealId}</div>
-      <div className="w-1/4 ">
+      <Link to={`/deal/${dealId}`} className="text-zinc-700 pr-10 hover:text-black flex justify-start">
+      <div className="w-1/5 ml-3">{dealId}</div>
+      </Link>
+      <div className="w-1/4 ml-20 ">
         <p>{ dealTitle}</p>
       </div><br></br>
-      <div className="w-1/4">{bidAmount}</div>
-      <div className="w-1/5">{bidPrice}</div>
+      <div className="w-1/3 ml-20">
+      <img src={icons[deal_token_denom]} alt={deal_token_denom} className="inline-block w-4 h-4 mr-1"/>
+      {bidAmount}</div>
+      <div className="w-1/5 ml-30">
+        <img src={icons[bid_token_denom]} alt={bid_token_denom} className="inline-block w-4 h-4 mr-1"/>
+        {bidPrice}</div>
       <div className="w-1/5">
         <button
           onClick={handleRemoveBid}
-          className="px-5 py-1 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-200 flex items-center"
+          className="px-5 py-1 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-200 flex"
         >
           <i className="fa-solid fa-xmark mr-2"></i>
-          Remove
+          Withdraw
         </button>
       </div>
     </div>

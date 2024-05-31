@@ -4,6 +4,7 @@ import { useFilteredBids } from "./hooks/useFilteredBids";
 import {useFilteredDeals} from "./hooks/useFilteredDeals";
 import MyBidItem from "./MyBidItem";
 import Deal from "./Deal";
+import { Link } from "react-router-dom";
 import toast, { Toaster } from 'react-hot-toast'
 const Profile = () => {
   const { filtereddeals, user, error: dealsError } = useFilteredDeals();
@@ -63,7 +64,7 @@ const Profile = () => {
           <div className="text-xs text-gray-700 uppercase bg-gray-50 flex justify-between px-6 py-5 font-semibold">
             <div className="w-1/5">Deal id</div>
             <div className="w-1/5">Deal</div>
-            <div className="w-1/5">Amount</div>
+            <div className="w-1/5">Quantity</div>
             <div className="w-1/5">Bid price</div>
             <div className="w-1/5">Actions</div>
           </div>
@@ -80,9 +81,11 @@ const Profile = () => {
                 bidAmount={bid.amount}
                 dealId={bid.dealId}
                 dealTitle={bid.dealDetails.deal_title}
+                deal_token_denom={bid.dealDetails.deal_token_denom}
                 bidPrice={bid.bidPrice}
                 onBidRemoved={handleBidRemoved}
                 bidId={bid.bidId}
+                bid_token_denom={bid.bidDenom}
               />
               );
             })

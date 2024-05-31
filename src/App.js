@@ -18,7 +18,7 @@ function App() {
           <Route path="/" element={<IndexPage />}> </Route>
           <Route path='/deals' element={<DealsComponent />}></Route>
           <Route path="/create-deal" element={<CreateDeal />} />
-          <Route path='/Bid/:id' element={<Bid />}></Route>
+          <Route path='/deal/:id' element={<Bid />}></Route>
           <Route path='/Profile' element={<Profile />}></Route>
         </Routes>
       </BrowserRouter>
