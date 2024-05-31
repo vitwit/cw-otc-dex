@@ -3,15 +3,20 @@ import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { useAllDeals } from "./hooks/useAllDeals";
 import icons from './assets/icons.json';
-
-
+import moment from "moment";
+import { useEffect } from "react";
+import { getLatestBlockHeight } from "./utils/util";
 const Deal = ({ dealId, dealDetails }) => {
-    const { user, response, latestBlockHeight } = useAllDeals();
-    const [setLatestBlockHeight] = useState(null);
-    const [getLatestBlockHeight]= useState(null);
+    const { user, response, latestblockHeight } = useAllDeals();
+    const [latestBlockHeight, setLatestBlockHeight] = useState(null)
+    // const [setLatestBlockHeight] = useState(null);
+    // const [getLatestBlockHeight]= useState(null);
+    const [expireTime, setExpireTime] = useState(null)
+    const [expireDate, setExpireDate] = useState(null)
+    const [progress, setProgress] = useState(null)
     const { start_block, end_block, deal_title, deal_creator, deal_token_denom, bid_token_denom, min_cap, total_bid } = dealDetails;
-    console.log("start block for status:",start_block);
-    console.log("current block height for status is:",latestBlockHeight);
+    // console.log("start block for status:",start_block);
+    // console.log("current block height for status is:",latestBlockHeight);
      // console.log("Component",dealId,dealDetails);
    const fetchData = async () => {
     try {
@@ -21,7 +26,7 @@ const Deal = ({ dealId, dealDetails }) => {
       console.error('Error fetching data:', error);
     }
   };
-   
+
   let status = '';
   if (latestBlockHeight < start_block) {
     status = 'Upcoming';
@@ -62,9 +67,10 @@ const Deal = ({ dealId, dealDetails }) => {
                 {status}
                 </span>
             </div>
-            <span className="border border-gray-300 rounded-lg text-xs px-3 py-0.5 mr-1.5 text-neutral-600">
-                bidding closes in 1hr
-            </span>
+            <span className="border border-gray-300 rounded-lg text-sm px-3 py-0.5 mr-1.5 mb-2.5 text-neutral-600 flex items-center">
+                  <i className="fa-regular fa-clock text-xs mr-1"></i>
+                  {dealDetails&&expireTime&&expireTime !=0 ? <>bidding closes in {expireTime}</> : <>bidding closed</>}
+                </span>
         </div>
 
         <div className="mt-6">
@@ -73,11 +79,11 @@ const Deal = ({ dealId, dealDetails }) => {
                     Deal subscription 
                 </p>
                 <p className="ml-auto text-sm text-gray-500">
-                    0%
+                    {progress>=100?<>100</>:progress}%
                 </p>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-blue-500 h-2 rounded-full" style={{width: '0%'}}></div>
+                <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${progress}%` }}></div>
             </div>
         </div>
         
