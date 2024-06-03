@@ -48,7 +48,7 @@ const CreateDeal = () => {
         if (!value) {
           error = 'Enter Deal Description'
           valid = false
-        } else if (!/^[a-zA-Z\s.,-]+$/.test(value)) {
+        } else if (!/^[a-zA-Z0-9\s.,-]+$/.test(value)) {
           error = 'Invalid Deal Description'
           valid = false
         }
@@ -141,7 +141,6 @@ const CreateDeal = () => {
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData((prevFormData) => ({ ...prevFormData, [name]: value }))
-    
     validateField(name, value)
   }
 
@@ -252,13 +251,16 @@ const CreateDeal = () => {
             }
           ]
         )
+        console.log("txxx",executeResponse);
         const txHash = executeResponse.transactionHash
         const response = await CosmWasmClient.queryClient.tx.getTx(txHash)
         const eventData = response.txResponse.events[12].attributes
         const dealIdObject = eventData.find((obj) => obj.key === 'deal_id')
         const dealId = dealIdObject ? dealIdObject.value : null
+        console.log("deall",dealId);
         return Promise.resolve(dealId)
       } catch (error) {
+        console.log("err",error,JSON.stringify(error));
         const errorMessage = error.message || error.toString()
         const indexOfMessage = errorMessage.indexOf('message index: 0:')
 
@@ -267,6 +269,7 @@ const CreateDeal = () => {
             .substring(indexOfMessage + 'message index: 0:'.length)
             .trim()
           console.error('Specific error message:', specificMessage)
+          return Promise.reject(specificMessage)
         }
 
         return Promise.reject(errorMessage)
@@ -276,13 +279,18 @@ const CreateDeal = () => {
 
     toast.promise(submitDeal(), {
       loading: 'Creating Deal...',
-      success: (dealId) =>
-      toast.success('Deal created successfully!', {
-        duration: 3000, // Adjust duration as needed
-        onClose: () => navigate(`/deal/${dealId}`), // Navigate after toast is closed
-      }),
+      // success: (dealId) =>
+      // toast.success('Deal created successfully!', {
+      //   duration: 3000, // Adjust duration as needed
+      //   onClose: () => navigate(`/deal/${dealId}`), // Navigate after toast is closed
+      // }),
+      success: (dealId) => {
+        // Show success message and then navigate
+        navigate(`/deal/${dealId}`); // Navigate immediately
+        return 'Deal created successfully!'; // Show success message// This message won't be shown, but it's required by the toast.promise API
+      },
       // navigate(`/deal/${dealId}`),
-      error: (error) => <b>{JSON.stringify(error)}!</b>
+      error: (error) => <b>{error.message}!</b>
     })
   }
 
@@ -626,14 +634,14 @@ const CreateDeal = () => {
                 </button>
                 <button
                   type="submit"
-                  // className="px-6 py-1.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-medium transition-colors duration-200 ease-in-out"
-                // >
-                className={`px-6 py-1.5 rounded-xl text-white font-medium transition-colors duration-200 ease-in-out ${
-                  validated
-                    ? 'bg-green-300 cursor-not-allowed'
-                    : 'bg-green-500 hover:bg-green-600'
-                }`}
-                disabled={validated}>
+                  className="px-6 py-1.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-medium transition-colors duration-200 ease-in-out"
+                >
+                {/* // className={`px-6 py-1.5 rounded-xl text-white font-medium transition-colors duration-200 ease-in-out ${
+                //   validated
+                //     ? 'bg-green-300 cursor-not-allowed'
+                //     : 'bg-green-500 hover:bg-green-600'
+                // }`}
+                // disabled={validated}> */}
                   Create deal
                 </button>
               </div>
@@ -641,13 +649,30 @@ const CreateDeal = () => {
           </div>
         </form>
       </main>
-      <Toaster position="top-right" width="550px" reverseOrder={false}
+      <Toaster position="top-right" width="650px" reverseOrder={false}
       toastOptions={{
         style: {
           width: 'auto', // Adjust the width dynamically based on content
-          maxWidth: '550px', // Set maximum width for the toast
+          maxWidth: '650px', // Set maximum width for the toast
         },
-      }} 
+          className: '',
+          duration: 5000,
+          style: {
+            background: '#239023',
+            color: '#fff'
+          },
+          // Default options for specific types
+          success: {
+            style: {
+              background: 'green',
+            },
+          },
+          error: {
+            style: {
+              background: 'red',
+            },
+          },     
+      }}
       />
     </>
   )
