@@ -86,6 +86,9 @@ export async function getUserBalancebyDenom(address,denom,decimal) {
   const CosmWasmClient = await SigningCosmWasmClient.connectWithSigner(AppConstants.RPC_URL, offlineSigner, {
     gasPrice: 100000,
   });
+  if(!address||!denom){
+    return {balance:0};
+  }
   const balance = await CosmWasmClient.getBalance(address, denom);
   const amount = parseInt(balance.amount, 10);
 

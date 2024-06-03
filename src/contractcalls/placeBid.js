@@ -55,6 +55,19 @@ export const placeBid = async (amount, price, denom,dealDenom,dealId) => {
     return Promise.resolve(response)
   } catch (error) {
     console.error('Error executing bid:', error)
+
+
+    const errorMessage = error.message || error.toString()
+    const indexOfMessage = errorMessage.indexOf('message index: 0:')
+
+    if (indexOfMessage !== -1) {
+      const specificMessage = errorMessage
+        .substring(indexOfMessage + 'message index: 0:'.length)
+        .trim()
+      console.error('Specific error message:', specificMessage)
+    }
+
+    return Promise.reject(errorMessage)
     return Promise.reject(error.message)
   }
 }

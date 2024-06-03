@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react'
 import toast, { Toaster } from 'react-hot-toast'
 import { placeBid } from './contractcalls/placeBid'
-const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom}) => {
+import { getUserBalancebyDenom } from './utils/fetchKeplrBalance'
+import { fetchTokenDetails } from './utils/getDenom'
+const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom,dealDecimal}) => {
   const formRef = useRef(null)
   const [loading, setLoading] = useState(false)
   const [totalAmount, setTotalAmount] = useState(null)
@@ -12,14 +14,20 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom}) => {
   const [isPriceValid, setIsPriceValid] = useState(false)
   const [price, setPrice] = useState('')
   const [availableBalance,SetAvailable]=useState('');
+
+  const fetchBalance=async ()=>{
+      const { denom: bid_denom, decimal: bid_decimal } = await fetchTokenDetails(bidDenom)
+      const address=localStorage.getItem('walletaddress');
+      const balance=await getUserBalancebyDenom(address,bid_denom,bid_decimal);
+      SetAvailable(balance.balance)
+  }
+  fetchBalance()
   const handleSubmit = async (e) => {
     e.preventDefault()
     const formData = Object.fromEntries(new FormData(formRef.current))
     const { amount, price } = formData
-
     if (!localStorage.getItem('walletaddress')) {
-      toast.error('Connect Your Wallet to Place Bid')
-      return
+      return toast.error('Connect Your Wallet to Place Bid')
     }
 
     // Validate form fields
@@ -39,7 +47,8 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom}) => {
 
     setLoading(true)
     try {
-      toast.promise(placeBid(amount, price, dealData.bid_token_denom,dealData.deal_token_denom,dealId), {
+      await toast.promise(
+        placeBid(amount, price, dealData.bid_token_denom,dealData.deal_token_denom,dealId), {
         loading: <b>Please Wait..Creating Bid...</b>,
         success: () => <b>Bid Placed Successfully</b>,
         error: (error) => <b>{JSON.stringify(error)}</b>
@@ -64,7 +73,11 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom}) => {
       setPrice('')
       setPriceError(null)
     } else {
-      if (parseFloat(value) < dealData.min_price) {
+      if (isNaN(value)){
+        setTotalAmount(null)
+        setPriceError('price should be a number')
+      }
+      else if (parseFloat(value) < dealData.min_price) {
         setTotalAmount(null)
         setPriceError(`Price can't be less than ${dealData.min_price}`)
       } else {
@@ -86,9 +99,13 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom}) => {
       setAmount('')
       setAmountError(null)
     } else {
-      if (parseFloat(value) > dealData.deal_token_amount) {
+      if (isNaN(value)){
         setTotalAmount(null)
-        setAmountError(`Quantity should be less than or equal to ${dealData.deal_token_amount}`)
+        setAmountError('Quantity should be a number')
+      }
+      else if (Number(value) > Number(dealData.deal_token_amount/(10**dealDecimal))) {
+        setTotalAmount(null)
+        setAmountError(`Quantity should be less than or equal to ${dealData.deal_token_amount/(10**dealDecimal)}`)
       } else {
         setIsAmountValid(true)
         setAmountError(null)
@@ -162,8 +179,10 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom}) => {
           <div className="flex flex-row space-x-2">
             {totalAmount && totalAmount > 0 && (
               <div class="mx-auto">
+                <p>Available Balance: {availableBalance+ '  ' + bidDenom}</p>
                 <b>Bid Size : {totalAmount + '  ' + bidDenom}</b>
               </div>
+
             )}
           </div>
           <div className="flex justify-end">
@@ -189,27 +208,6 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom}) => {
             </button>
           </div>
         </form>
-        <Toaster 
-
-toastOptions={{
-  // Define default options
-  className: '',
-  duration: 5000,
-  style: {
-    background: '#363636',
-    color: '#fff',
-  },
-
-  // Default options for specific types
-  success: {
-    duration: 3000,
-    theme: {
-      primary: 'green',
-      secondary: 'black',
-    },
-  },
-}}
-        />
       </div>
     </div>
   )

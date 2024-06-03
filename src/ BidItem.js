@@ -106,13 +106,16 @@ const BidItem = ({ bid, bidId, dealId, onBidRemoved, dealDenom, isWinning,deal_D
         
     const errorMessage = error.message || error.toString();
     const indexOfMessage = errorMessage.indexOf('message index: 0:');
-    
+  
     if (indexOfMessage !== -1) {
       const specificMessage = errorMessage.substring(indexOfMessage + 'message index: 0:'.length).trim();
       console.error('Specific error message:', specificMessage);
       toast.error(specificMessage);
     }
-
+    else{
+      toast.error(error);
+    }
+    
     }
   };
 

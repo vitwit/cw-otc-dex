@@ -15,6 +15,7 @@ import { fetchTokenDenom } from './utils/getDecimalByDenom'
 import icons from './assets/icons.json'
 import moment from 'moment'
 import { getUser } from './GetUser'
+import BidsOverview from './BidsOverView'
 
 const Bid = () => {
   const intervalRef = useRef(null)
@@ -34,9 +35,9 @@ const Bid = () => {
   const [walletAddress, setWalletAddress] = useState(null)
   const [bidStatusMap, setBidStatusMap] = useState(null)
   const [expectedResult, setExpectedResult] = useState(null)
-  const [dealDenom,setDealDenom]=useState(null);
-  const [bidDenom,setBidDenom]=useState(null);
-  const [dealDecimal,setDealDecimal]=useState(null);
+  const [dealDenom, setDealDenom] = useState(null)
+  const [bidDenom, setBidDenom] = useState(null)
+  const [dealDecimal, setDealDecimal] = useState(null)
   const address = localStorage.getItem('walletaddress')
 
   const [marketRate, setMarketRate] = useState(null)
@@ -53,7 +54,7 @@ const Bid = () => {
   useEffect(() => {
     const getMarketRates = async () => {
       try {
-        const prices = await fetchMarketPrices('OSMO', 'ATOM')
+        const prices = await fetchMarketPrices(dealDenom, bidDenom)
         const marketExchangeRate = calculateMarketExchangeRate(
           prices.dealTokenPrice,
           prices.bidTokenPrice
@@ -75,16 +76,17 @@ const Bid = () => {
       try {
         const result = await getDeal(id)
         setDealData(result.deal)
-            setLoading(false)
+        setLoading(false)
         setActivityLoading(false)
         const { denom: bid_denom, decimal: bid_decimal } = await fetchTokenDenom(
           result.deal.bid_token_denom
         )
         setBidDenom(bid_denom)
-        const { denom: deal_denom, decimal: deal_decimal } = await fetchTokenDenom(result.deal.deal_token_denom)
+        const { denom: deal_denom, decimal: deal_decimal } = await fetchTokenDenom(
+          result.deal.deal_token_denom
+        )
         setDealDenom(deal_denom)
         setDealDecimal(deal_decimal)
-    
       } catch (e) {
         console.log(e.message)
       }
@@ -116,7 +118,6 @@ const Bid = () => {
           } else {
             const expirationDate = moment().add(remainingSeconds, 'seconds')
             setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm A'))
-
             intervalRef.current = setInterval(() => {
               if (remainingSeconds <= 0) {
                 clearInterval(intervalRef.current)
@@ -145,7 +146,7 @@ const Bid = () => {
               }
 
               // Trim any trailing whitespace
-              formattedTime = formattedTime.trim();
+              formattedTime = formattedTime.trim()
               // Set the remaining time
               setExpireTime(formattedTime)
               remainingSeconds -= 1
@@ -177,80 +178,86 @@ const Bid = () => {
     }
   }, [dealData])
 
+  const fetchBidStore = async () => {
+    try {
+      const { bids: bidsResponse, error } = await getBidStore(id)
+      // console.log('len', bidsResponse.length)
+      if (bidsResponse.length > 0) {
+
+        setBidStoreData(bidsResponse)
+        console.log("--->",bidsResponse);
+      }
+    } catch (e) {
+      console.log(e.message)
+    }
+  }
   useEffect(() => {
-    const fetchBidStore = async () => {
+    console.log("in bidstore")
+    fetchBidStore()
+  }, [id,showBidForm])
+
+  const fetchMyBids = async () => {
+    // if(walletAddress!= localStorage.getItem('walletaddress')){
+    const address = localStorage.getItem('walletaddress')
+    // console.log("add",address);
+    //   setWalletAddress(address)
+    // }
+    if (address) {
       try {
         const { bids: bidsResponse, error } = await getBidStore(id)
-        console.log('len', bidsResponse.length)
-        if (bidsResponse.length > 0) {
-          setBidStoreData(bidsResponse)
+        if (dealData && bidsResponse.length > 0) {
+          console.log('mine', bidsResponse)
+          const sortedBids = bidsResponse.sort((a, b) => {
+            const priceComparison = parseInt(b[1].price) - parseInt(a[1].price)
+            if (priceComparison !== 0) {
+              return priceComparison
+            } else {
+              // If prices are equal, sort by bid id
+              return a[0] - b[0]
+            }
+          })
+
+          console.log('hii', sortedBids)
+
+          let cumulativeAmount = 0
+          const dealAmount = dealData.deal_token_amount // Set your deal amount here
+
+          // Create a map to store the bid ID and a boolean value
+          const bidStatusMap = new Map()
+          // Iterate through the sorted bids to calculate the cumulative amount
+          sortedBids.forEach((bid) => {
+            const diff = Number(dealAmount) - Number(cumulativeAmount)
+            let isWinning = 0
+            if (diff > 0) {
+              if (Number(bid[1].amount) <= Number(diff)) {
+                isWinning = 1
+              } else {
+                isWinning = 2
+              }
+            }
+            cumulativeAmount += Number(bid[1].amount)
+            bidStatusMap.set(bid[0], isWinning)
+          })
+          console.log('Bid Status Map:', bidStatusMap)
+          const myBids = bidsResponse.filter((bid) => bid[1].bidder === address)
+          setMyBids(myBids)
+          setBidStatusMap(bidStatusMap)
         }
-      } catch (e) {
-        console.log(e.message)
+      } catch (error) {
+        console.error('Error fetching my bids: ', error)
       }
     }
-    fetchBidStore()
-  }, [id])
+  }
   useEffect(() => {
+    console.log("in mybids")
     window.addEventListener('keplr_keystorechange', async () => {
       const user = await getUser()
       localStorage.setItem('walletaddress', user.currentAddress)
       setWalletAddress(localStorage.getItem('walletaddress'))
     })
-    const fetchMyBids = async () => {
-      // if(walletAddress!= localStorage.getItem('walletaddress')){
-      const address = localStorage.getItem('walletaddress')
-      // console.log("add",address);
-      //   setWalletAddress(address)
-      // }
-      if (address) {
-        try {
-          const { bids: bidsResponse, error } = await getBidStore(id)
-          if (dealData && bidsResponse.length > 0) {
-            console.log('mine', bidsResponse)
-            const sortedBids = bidsResponse.sort((a, b) => {
-              const priceComparison = parseInt(b[1].price) - parseInt(a[1].price)
-              if (priceComparison !== 0) {
-                return priceComparison
-              } else {
-                // If prices are equal, sort by bid id
-                return a[0] - b[0]
-              }
-            })
-
-            console.log('hii', sortedBids)
-
-            let cumulativeAmount = 0
-            const dealAmount = dealData.deal_token_amount // Set your deal amount here
-
-            // Create a map to store the bid ID and a boolean value
-            const bidStatusMap = new Map()
-            // Iterate through the sorted bids to calculate the cumulative amount
-            sortedBids.forEach((bid) => {
-              const diff = Number(dealAmount) -  Number(cumulativeAmount)
-              let isWinning = 0
-              if (diff > 0) {
-                if (Number(bid[1].amount) <= Number(diff)) {
-                  isWinning = 1
-                } else {
-                  isWinning = 2
-                }
-              }
-              cumulativeAmount += Number(bid[1].amount)
-              bidStatusMap.set(bid[0], isWinning)
-            })
-            console.log('Bid Status Map:', bidStatusMap)
-            const myBids = bidsResponse.filter((bid) => bid[1].bidder === address)
-            setMyBids(myBids)
-            setBidStatusMap(bidStatusMap)
-          }
-        } catch (error) {
-          console.error('Error fetching my bids: ', error)
-        }
-      }
-    }
+  
     fetchMyBids()
-  }, [id, dealData, walletAddress])
+  }, [id, dealData, walletAddress,showBidForm])
   const toggleBidForm = () => {
     setShowBidForm(!showBidForm)
   }
@@ -270,6 +277,8 @@ const Bid = () => {
       newMap.delete(bidId)
       return newMap
     })
+    fetchBidStore()
+    fetchMyBids()
   }
   const handleDealExecution = () => {
     toast.promise(executeDeal(id), {
@@ -289,6 +298,7 @@ const Bid = () => {
           dealData={dealData}
           dealId={id}
           bidDenom={bidDenom}
+          dealDecimal={dealDecimal}
         />
       )}
       <main className="px-4 md:px-24 mt-5 md:mt-9 mb-9">
@@ -330,9 +340,7 @@ const Bid = () => {
                     className="inline-block w-4 h-4 mr-1"
                   />
                   {/* min 1,000 USDT */}
-
-                  min {dealData && dealData.min_price} {bidDenom!=null && bidDenom}
-                  
+                  min {dealData && dealData.min_price} {bidDenom != null && bidDenom}
                 </span>
                 <span className="border border-gray-300 rounded-lg text-sm px-3 py-0.5 mr-1.5 mb-2.5 text-neutral-600 flex items-center">
                   <i className="fa-regular fa-clock text-xs mr-1"></i>
@@ -352,11 +360,11 @@ const Bid = () => {
                 <p className="w-1/2 md:w-1/3 font-['Raleway']  text-start">Deal Token Amount</p>
                 <div className="text-gray-600 font-medium ml-1">
                   {/* 78%/60% */}
-                  {dealData && dealData.deal_token_amount}
+                  {dealData && dealData.deal_token_amount/(10**dealDecimal)}
                 </div>
                 <div className="text-gray-600 font-medium ml-1">
                   {/* 78%/60% */}
-                  {dealData&&dealDenom}
+                  {dealData && dealDenom}
                 </div>
               </div>
               <div className="w-full mt-5 flex items-start">
@@ -386,7 +394,7 @@ const Bid = () => {
                 </div>
                 <div className="text-gray-600 font-medium ml-1">
                   {/* 78%/60% */}
-                  {dealData&&dealDenom}
+                  {dealData && dealDenom}
                 </div>
               </div>
               <div className="w-full mt-5 flex items-center">
@@ -407,18 +415,19 @@ const Bid = () => {
               </div>
             </div>
 
-            <div className="mt-5 bg-white px-5 py-3 border border-gray-200 rounded-lg">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="">
+            <div className="mt-5 bg-white px-5 py-3 border border-gray-200 rounded-lg h-[400px]">
+              <div className="grid">
+              {bidStoreData&&<BidsOverview data={bidStoreData} deal_decimal={dealDecimal}/>}
+                {/* <div className="">
                   <h4 className="text-lg">Bids overview</h4>
 
                   <div className="mt-4 bg-emerald-50 h-44"></div>
-                </div>
-                <div className="">
+                </div> */}
+                {/* <div className="">
                   <h4 className="text-lg">Bid settlement</h4>
 
                   <div className="mt-4 bg-cyan-50 h-44"></div>
-                </div>
+                </div> */}
               </div>
             </div>
           </div>
@@ -426,14 +435,26 @@ const Bid = () => {
           <div className="col-span-2 md:col-span-1 py-5 md:px-7">
             <div className="px-2 md:px-0">
               <h4 className="text-xl font-medium text-black/80">
-                Dealer price: 1 {dealData && dealDenom} ={' '}
-                {dealData && dealData.min_price} {dealData && bidDenom}
+                Dealer price: 1 {dealData && dealDenom} = {dealData && dealData.min_price}{' '}
+                {dealData && bidDenom}
               </h4>
-              <p className="text-gray-600">
-                {percentageDifference && Math.abs(percentageDifference).toFixed(2)}%{' '}
-                {percentageDifference > 0 ? 'higher' : 'lower'} than the market rate.
-                {/* 20% lower than market price */}
-              </p>
+              {percentageDifference && percentageDifference > 5 ? (
+                <>
+                  <p className="text-red-600">
+                    {percentageDifference && Math.abs(percentageDifference).toFixed(2)}%{' '}
+                    {percentageDifference > 0 ? 'higher' : 'lower'} than the market rate.
+                    {/* 20% lower than market price */}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-600">
+                    {percentageDifference && Math.abs(percentageDifference).toFixed(2)}%{' '}
+                    {percentageDifference > 0 ? 'higher' : 'lower'} than the market rate.
+                    {/* 20% lower than market price */}
+                  </p>
+                </>
+              )}
 
               {loading ? (
                 <button
@@ -687,11 +708,31 @@ const Bid = () => {
               </table>
             </div>
           </div>
-          <Toaster 
+          <Toaster
+            toastOptions={{
+              // Define default options
+              className: '',
+              duration: 5000,
+              style: {
+                background: '#239023',
+                color: '#fff'
+              },
+              // Default options for specific types
+              success: {
+                style: {
+                  background: 'green',
+                },
+              },
+              error: {
+                style: {
+                  background: 'red',
+                },
+              },
+            }}            
             position="top-right"
-            width='550px'
+            width="550px"
             reverseOrder={false}
-            />
+          />
         </div>
       </main>
     </>
