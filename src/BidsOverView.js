@@ -91,7 +91,7 @@ const transformData = (data, deal_decimal) => {
     labels,
     datasets: [
       {
-        label: 'Bid Size',
+         label: 'Bid Size...',
         data: datasetData,
         borderColor: 'rgba(75, 192, 192, 1)',
         backgroundColor: 'rgba(75, 192, 192, 0.2)',
@@ -106,16 +106,17 @@ const BidsOverview = ({ data, deal_decimal }) => {
   const chartData = transformData(data, deal_decimal)
 
   const options = {
-    // responsive: true,
-    // plugins: {
-    //   legend: {
-    //     position: 'top'
-    //   },
-    //   title: {
-    //     display: true,
-    //     text: 'Bids Overview'
-    //   }
-    // },
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top',
+        display:false
+      },
+      // title: {
+      //   display: true,
+      //   text: 'Bids Overview'
+      // }
+    },
     scales: {
       x: {
         title: {

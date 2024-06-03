@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { getUser } from "../GetUser";
+import toast, { Toaster } from 'react-hot-toast'
 import { useState } from "react";
 import { useEffect } from "react";
 const Header = (props) => {
@@ -8,7 +9,7 @@ const Header = (props) => {
 
         window.addEventListener("keplr_keystorechange", async () => {
            // console.log("Key store in Keplr is changed. You may need to refetch the account info.")
-           const user = await getUser();
+           const {user,error}= await getUser();
            setUsername(user.currentAddress);
            localStorage.setItem("walletaddress",user.currentAddress);
         })
@@ -23,7 +24,10 @@ const Header = (props) => {
         // Simulating the user being fetched from a service
         try{
           console.log("hello man");
-          const user = await getUser();
+          const {user,error}= await getUser();
+          if(error.length>0){
+            return toast.error(error);
+          }
           setUsername(user.currentAddress);
           localStorage.setItem("walletaddress",user.currentAddress);
         }
@@ -101,6 +105,7 @@ username ? (
         </nav>
 
         <div className="h-20"></div>
+        <Toaster></Toaster>
     </>
 }
 

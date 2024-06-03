@@ -3,6 +3,7 @@ import Header from './components/Header'
 import { Link, useNavigate } from 'react-router-dom'
 import axiosInstance from './api/axios'
 import { getOfflineSignerAndCosmWasmClient } from './GetClient'
+
 import { AppConstants } from './config/constant'
 import { getLatestBlockHeight } from './utils/util'
 import toast, { Toaster } from 'react-hot-toast'
@@ -12,7 +13,7 @@ import { extractDenomsAndDecimals } from './utils/getDenoms'
 const CreateDeal = () => {
   const formRef = useRef(null)
   const result = extractDenomsAndDecimals()
-  const [validated,setValidated]=useState(true);
+  const [validated, setValidated] = useState(true)
   const [formData, setFormData] = useState({
     dealTitle: '',
     dealDescription: '',
@@ -153,7 +154,7 @@ const CreateDeal = () => {
       console.log('not all')
       return
     }
-    setValidated(false);
+    setValidated(false)
     console.log(validateAllFields())
     console.log('hello----')
     // Convert a date string in ISO 8601 format to epoch time
@@ -251,17 +252,33 @@ const CreateDeal = () => {
             }
           ]
         )
-        console.log("txxx",executeResponse);
+        console.log('txxx', executeResponse)
         const txHash = executeResponse.transactionHash
         const response = await CosmWasmClient.queryClient.tx.getTx(txHash)
         const eventData = response.txResponse.events[12].attributes
         const dealIdObject = eventData.find((obj) => obj.key === 'deal_id')
         const dealId = dealIdObject ? dealIdObject.value : null
-        console.log("deall",dealId);
+        console.log('deall', dealId)
         return Promise.resolve(dealId)
       } catch (error) {
-        console.log("err",error,JSON.stringify(error));
-        const errorMessage = error.message || error.toString()
+        const { offlineSigner, CosmWasmClient } = await getOfflineSignerAndCosmWasmClient()
+        function find64CharHex(message) {
+          if (typeof message !== 'string') {
+              console.error("Input is not a string.");
+              return null;
+          }
+          const hexPattern = /[0-9A-Fa-f]{64}/g;
+          const result = message.match(hexPattern);
+          return result ? result[0] : null;
+      }
+  
+      // Assuming the error object has a message property
+      const errorMessages = error.message || '';
+      const txHash = find64CharHex(errorMessages);
+      const response = await CosmWasmClient.queryClient.tx.getTx(txHash)
+      console.log("res",response.txResponse.rawLog);
+        console.log('err', error, JSON.stringify(error))
+        const errorMessage = response.txResponse.rawLog
         const indexOfMessage = errorMessage.indexOf('message index: 0:')
 
         if (indexOfMessage !== -1) {
@@ -286,11 +303,11 @@ const CreateDeal = () => {
       // }),
       success: (dealId) => {
         // Show success message and then navigate
-        navigate(`/deal/${dealId}`); // Navigate immediately
-        return 'Deal created successfully!'; // Show success message// This message won't be shown, but it's required by the toast.promise API
+        navigate(`/deal/${dealId}`) // Navigate immediately
+        return 'Deal created successfully!' // Show success message// This message won't be shown, but it's required by the toast.promise API
       },
       // navigate(`/deal/${dealId}`),
-      error: (error) => <b>{error.message}!</b>
+      error: (error) => <b>{JSON.stringify(error)}!</b>
     })
   }
 
@@ -636,7 +653,7 @@ const CreateDeal = () => {
                   type="submit"
                   className="px-6 py-1.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-medium transition-colors duration-200 ease-in-out"
                 >
-                {/* // className={`px-6 py-1.5 rounded-xl text-white font-medium transition-colors duration-200 ease-in-out ${
+                  {/* // className={`px-6 py-1.5 rounded-xl text-white font-medium transition-colors duration-200 ease-in-out ${
                 //   validated
                 //     ? 'bg-green-300 cursor-not-allowed'
                 //     : 'bg-green-500 hover:bg-green-600'
@@ -649,12 +666,15 @@ const CreateDeal = () => {
           </div>
         </form>
       </main>
-      <Toaster position="top-right" width="650px" reverseOrder={false}
-      toastOptions={{
-        style: {
-          width: 'auto', // Adjust the width dynamically based on content
-          maxWidth: '650px', // Set maximum width for the toast
-        },
+      <Toaster
+        position="top-right"
+        width="650px"
+        reverseOrder={false}
+        toastOptions={{
+          style: {
+            width: 'auto', // Adjust the width dynamically based on content
+            maxWidth: '650px' // Set maximum width for the toast
+          },
           className: '',
           duration: 5000,
           style: {
@@ -664,15 +684,15 @@ const CreateDeal = () => {
           // Default options for specific types
           success: {
             style: {
-              background: 'green',
-            },
+              background: 'green'
+            }
           },
           error: {
             style: {
-              background: 'red',
-            },
-          },     
-      }}
+              background: 'red'
+            }
+          }
+        }}
       />
     </>
   )

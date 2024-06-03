@@ -79,9 +79,15 @@ export async function getUser() {
         'linear-gradient(180deg, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0) 100%)',
     },
   }
+  if (!window.keplr) {
+     return { 
+      currentAddress:'', error: 'Install Keplr to use the Application'
+     }
+  } 
   window.keplr.experimentalSuggestChain(chain_config);
   const chainId='testnet';
   await window.keplr.enable(chainId);
+
   const offlineSigner = await window.getOfflineSigner(chainId);
   // const CosmWasmClient = await SigningCosmWasmClient.connectWithSigner('142.93.213.125:26657', offlineSigner,{
   //   gasPrice:100000
@@ -89,5 +95,5 @@ export async function getUser() {
   let accounts = await offlineSigner.getAccounts();
   const currentAddress = accounts[0].address;
  
-  return { currentAddress };
+  return { currentAddress,error:''};
 }
