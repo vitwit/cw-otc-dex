@@ -18,10 +18,13 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom,dealDecimal}
   const fetchBalance=async ()=>{
       const { denom: bid_denom, decimal: bid_decimal } = await fetchTokenDetails(bidDenom)
       const address=localStorage.getItem('walletaddress');
-      const balance=await getUserBalancebyDenom(address,bid_denom,bid_decimal);
-      SetAvailable(balance.balance)
+      if(address){
+        console.log("erro",address);
+        const balance=await getUserBalancebyDenom(address,bid_denom,bid_decimal);
+        console.log("erross");
+        SetAvailable(balance.balance)
+      }
   }
-  fetchBalance()
   const handleSubmit = async (e) => {
     e.preventDefault()
     const formData = Object.fromEntries(new FormData(formRef.current))
@@ -86,6 +89,7 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom,dealDecimal}
         setIsPriceValid(true)
         if (amount && !amountError) {
           setTotalAmount(parseFloat(amount) * parseFloat(value))
+          fetchBalance()
         }
       }
     }
@@ -112,6 +116,7 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom,dealDecimal}
         setAmount(value)
         if (price && !priceError) {
           setTotalAmount(parseFloat(value) * parseFloat(price))
+          fetchBalance()
         }
       }
     }

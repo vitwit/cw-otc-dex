@@ -81,7 +81,7 @@ export async function getUser() {
   }
   if (!window.keplr) {
      return { 
-      currentAddress:'', error: 'Install Keplr to use the Application'
+      user:'', error: 'Install Keplr to use the Application'
      }
   } 
   window.keplr.experimentalSuggestChain(chain_config);
@@ -95,5 +95,5 @@ export async function getUser() {
   let accounts = await offlineSigner.getAccounts();
   const currentAddress = accounts[0].address;
  
-  return { currentAddress,error:''};
+  return { user:currentAddress,error:''};
 }

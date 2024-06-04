@@ -261,6 +261,7 @@ const CreateDeal = () => {
         console.log('deall', dealId)
         return Promise.resolve(dealId)
       } catch (error) {
+        console.log(error);
         const { offlineSigner, CosmWasmClient } = await getOfflineSignerAndCosmWasmClient()
         function find64CharHex(message) {
           if (typeof message !== 'string') {
@@ -271,25 +272,32 @@ const CreateDeal = () => {
           const result = message.match(hexPattern);
           return result ? result[0] : null;
       }
-  
+    console.log("----",error.message);
       // Assuming the error object has a message property
       const errorMessages = error.message || '';
       const txHash = find64CharHex(errorMessages);
-      const response = await CosmWasmClient.queryClient.tx.getTx(txHash)
-      console.log("res",response.txResponse.rawLog);
-        console.log('err', error, JSON.stringify(error))
-        const errorMessage = response.txResponse.rawLog
-        const indexOfMessage = errorMessage.indexOf('message index: 0:')
+  
+      if(txHash!=null){
+        const response = await CosmWasmClient.queryClient.tx.getTx(txHash)
+        console.log("res",response.txResponse.rawLog);
+          console.log('err', error, JSON.stringify(error))
+          const errorMessage = response.txResponse.rawLog
+          const indexOfMessage = errorMessage.indexOf('message index: 0:')
+  
+          if (indexOfMessage !== -1) {
+            
+            const specificMessage = errorMessage
+              .substring(indexOfMessage + 'message index: 0:'.length)
+              .trim()
+            console.error('Specific error message:', specificMessage)
+            return Promise.reject(specificMessage)
+          }else{
+            return Promise.reject(errorMessage)
+          }
+      }
+  
 
-        if (indexOfMessage !== -1) {
-          const specificMessage = errorMessage
-            .substring(indexOfMessage + 'message index: 0:'.length)
-            .trim()
-          console.error('Specific error message:', specificMessage)
-          return Promise.reject(specificMessage)
-        }
-
-        return Promise.reject(errorMessage)
+        return Promise.reject(error.message)
         return Promise.reject(error.message)
       }
     }
@@ -303,7 +311,7 @@ const CreateDeal = () => {
       // }),
       success: (dealId) => {
         // Show success message and then navigate
-        navigate(`/deal/${dealId}`) // Navigate immediately
+      navigate(`/deal/${dealId}`) // Navigate immediately
         return 'Deal created successfully!' // Show success message// This message won't be shown, but it's required by the toast.promise API
       },
       // navigate(`/deal/${dealId}`),
@@ -666,34 +674,6 @@ const CreateDeal = () => {
           </div>
         </form>
       </main>
-      <Toaster
-        position="top-right"
-        width="650px"
-        reverseOrder={false}
-        toastOptions={{
-          style: {
-            width: 'auto', // Adjust the width dynamically based on content
-            maxWidth: '650px' // Set maximum width for the toast
-          },
-          className: '',
-          duration: 5000,
-          style: {
-            background: '#239023',
-            color: '#fff'
-          },
-          // Default options for specific types
-          success: {
-            style: {
-              background: 'green'
-            }
-          },
-          error: {
-            style: {
-              background: 'red'
-            }
-          }
-        }}
-      />
     </>
   )
 }

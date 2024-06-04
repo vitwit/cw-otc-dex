@@ -4,20 +4,20 @@ import toast, { Toaster } from 'react-hot-toast'
 import { useState } from "react";
 import { useEffect } from "react";
 const Header = (props) => {
-    const [username,setUsername]=useState(null);
+    const [username,setUsername]=useState(localStorage.getItem('walletaddress'));
     useEffect(() => {
-
-        window.addEventListener("keplr_keystorechange", async () => {
-           // console.log("Key store in Keplr is changed. You may need to refetch the account info.")
-           const {user,error}= await getUser();
-           setUsername(user.currentAddress);
-           localStorage.setItem("walletaddress",user.currentAddress);
-        })
+      window.addEventListener("keplr_keystorechange", async () => {
+        // console.log("Key store in Keplr is changed. You may need to refetch the account info.")
+        const {user,error}= await getUser();
+        setUsername(user);
+        localStorage.setItem("walletaddress",user);
         const value=localStorage.getItem("walletaddress");
         console.log("hello",value);
         if(value){
             setUsername(value);       
         }
+     })
+     
       }, []);
 
     const handleConnectWallet = async () => {
@@ -28,8 +28,9 @@ const Header = (props) => {
           if(error.length>0){
             return toast.error(error);
           }
-          setUsername(user.currentAddress);
-          localStorage.setItem("walletaddress",user.currentAddress);
+          console.log("-----",user);
+          setUsername(user);
+          localStorage.setItem("walletaddress",user);
         }
         catch(e){
            console.log(e.message);
@@ -105,7 +106,34 @@ username ? (
         </nav>
 
         <div className="h-20"></div>
-        <Toaster></Toaster>
+        <Toaster
+        position="top-right"
+        width="650px"
+        reverseOrder={false}
+        toastOptions={{
+          style: {
+            width: 'auto', // Adjust the width dynamically based on content
+            maxWidth: '650px' // Set maximum width for the toast
+          },
+          className: '',
+          duration: 5000,
+          style: {
+            background: '#239023',
+            color: '#fff'
+          },
+          // Default options for specific types
+          success: {
+            style: {
+              background: 'green'
+            }
+          },
+          error: {
+            style: {
+              background: 'red'
+            }
+          }
+        }}
+      />
     </>
 }
 

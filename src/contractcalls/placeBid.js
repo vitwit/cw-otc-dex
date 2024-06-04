@@ -1,7 +1,7 @@
 import { getOfflineSignerAndCosmWasmClient } from '../GetClient'
 import { AppConstants } from '../config/constant'
 import { fetchTokenDenom } from '../utils/getDecimalByDenom'
-export const placeBid = async (amount, price, denom,dealDenom,dealId) => {
+export const placeBid = async (amount, price, denom, dealDenom, dealId) => {
   // const { amount, price, denom } = formData;
   try {
     const { offlineSigner, CosmWasmClient } = await getOfflineSignerAndCosmWasmClient()
@@ -17,13 +17,11 @@ export const placeBid = async (amount, price, denom,dealDenom,dealId) => {
       ],
       gas: '250000'
     }
-    const { denom: bid_denom, decimal: bid_decimal } = await fetchTokenDenom(
-      denom
-    )
+    const { denom: bid_denom, decimal: bid_decimal } = await fetchTokenDenom(denom)
     const { denom: deal_denom, decimal: deal_decimal } = await fetchTokenDenom(dealDenom)
     console.log('deal', bid_denom)
     const id = parseInt(dealId)
-    const bid_amount=amount*(10**deal_decimal);
+    const bid_amount = amount * 10 ** deal_decimal
     const executeMsg = {
       place_bid: {
         deal_id: id,
@@ -33,7 +31,7 @@ export const placeBid = async (amount, price, denom,dealDenom,dealId) => {
         price: price
       }
     }
-    const total_amount = '' + amount * price*(10**bid_decimal)
+    const total_amount = '' + amount * price * 10 ** bid_decimal
     const executeResponse = await CosmWasmClient.execute(
       BidderAddress,
       contractAddress,
@@ -55,19 +53,37 @@ export const placeBid = async (amount, price, denom,dealDenom,dealId) => {
     return Promise.resolve(response)
   } catch (error) {
     console.error('Error executing bid:', error)
+    const { offlineSigner, CosmWasmClient } = await getOfflineSignerAndCosmWasmClient()
+    function find64CharHex(message) {
+      if (typeof message !== 'string') {
+        console.error('Input is not a string.')
+        return null
+      }
+      const hexPattern = /[0-9A-Fa-f]{64}/g
+      const result = message.match(hexPattern)
+      return result ? result[0] : null
+    }
+    console.log('----', error.message)
+    // Assuming the error object has a message property
+    const errorMessages = error.message || ''
+    const txHash = find64CharHex(errorMessages)
 
+    if (txHash != null) {
+      const response = await CosmWasmClient.queryClient.tx.getTx(txHash)
+      const errorMessage = response.txResponse.rawLog
+      const indexOfMessage = errorMessage.indexOf('message index: 0:')
 
-    const errorMessage = error.message || error.toString()
-    const indexOfMessage = errorMessage.indexOf('message index: 0:')
-
-    if (indexOfMessage !== -1) {
-      const specificMessage = errorMessage
-        .substring(indexOfMessage + 'message index: 0:'.length)
-        .trim()
-      console.error('Specific error message:', specificMessage)
+      if (indexOfMessage !== -1) {
+        const specificMessage = errorMessage
+          .substring(indexOfMessage + 'message index: 0:'.length)
+          .trim()
+        console.error('Specific error message:', specificMessage)
+        return Promise.reject(specificMessage)
+      } else {
+        return Promise.reject(errorMessage)
+      }
     }
 
-    return Promise.reject(errorMessage)
     return Promise.reject(error.message)
   }
 }

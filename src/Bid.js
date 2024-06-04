@@ -708,7 +708,7 @@ const Bid = () => {
               </table>
             </div>
           </div>
-          <Toaster
+          {/* <Toaster
             toastOptions={{
               // Define default options
               className: '',
@@ -732,7 +732,7 @@ const Bid = () => {
             position="top-right"
             width="550px"
             reverseOrder={false}
-          />
+          /> */}
         </div>
       </main>
     </>
