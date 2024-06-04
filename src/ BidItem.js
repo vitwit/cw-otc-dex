@@ -120,7 +120,8 @@ const BidItem = ({ bid, bidId, dealId, onBidRemoved, dealDenom, isWinning,deal_D
   };
 
   return (
-    <div className="border-t border-gray-200">
+
+<div className="border-t border-gray-200">
       <div className="bg-white flex justify-between items-center px-6 py-3">
         <div className="w-1/3">
           <img src={icons[dealDenom]} alt={dealDenom} className="inline-block w-4 h-4 mr-1" />{quantity}

@@ -5,14 +5,22 @@ import {useFilteredDeals} from "./hooks/useFilteredDeals";
 import MyBidItem from "./MyBidItem";
 import Deal from "./Deal";
 import { Link } from "react-router-dom";
-import toast, { Toaster } from 'react-hot-toast'
+import toast, { Toaster } from 'react-hot-toast';
+import { getUser } from './GetUser';
 const Profile = () => {
   const { filtereddeals, user, error: dealsError } = useFilteredDeals();
   const { bids, error: bidsError, removeBid } = useFilteredBids();
   const [deals, setDeals] = useState(null);
-  const address = localStorage.getItem('walletaddress')
+  //const address = localStorage.getItem('walletaddress')
+  const [walletAddress, setWalletAddress] = useState(null)
 
   useEffect(() => {
+
+    window.addEventListener('keplr_keystorechange', async () => {
+      const user = await getUser()
+      localStorage.setItem('walletaddress', user.currentAddress)
+      setWalletAddress(localStorage.getItem('walletaddress'))
+    })
     if (filtereddeals) {
       setDeals(filtereddeals);
     }
@@ -38,7 +46,7 @@ const Profile = () => {
              My deals
            </h3>
          </div>
-         <div className="grid grid-cols-4 gap-4 mt-5 mb-9 md:mb-14">
+         <div className="grid grid-cols-3 gap-4 mt-5 mb-9 md:mb-14">
            {deals && deals.length > 0 ? (
             <>
               {deals.map((deal, index) => (
@@ -62,7 +70,7 @@ const Profile = () => {
       <div className="overflow-x-auto border border-gray-300 rounded-lg mt-5 bg-white">
         <div className="min-w-full text-sm text-left text-gray-800 mb-4">
           <div className="text-xs text-gray-700 uppercase bg-gray-50 flex justify-between px-6 py-5 font-semibold">
-            <div className="w-1/5">Deal id</div>
+            <div className="w-1/8">Deal id</div>
             <div className="w-1/5">Deal</div>
             <div className="w-1/5">Quantity</div>
             <div className="w-1/5">Bid price</div>

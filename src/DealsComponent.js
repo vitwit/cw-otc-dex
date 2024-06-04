@@ -98,7 +98,7 @@ const DealsComponent = () => {
             ))}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-12 mb-36">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-12 mb-36">
             {filteredDeals.length > 0 ? (
               filteredDeals.map((deal, index) => (
                 <Deal dealId={deal[0]} dealDetails={deal[1]} key={index} />
