@@ -63,8 +63,6 @@ export const placeBid = async (amount, price, denom, dealDenom, dealId) => {
       const result = message.match(hexPattern)
       return result ? result[0] : null
     }
-    console.log('----', error.message)
-    // Assuming the error object has a message property
     const errorMessages = error.message || ''
     const txHash = find64CharHex(errorMessages)
 

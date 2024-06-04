@@ -93,73 +93,190 @@ const Bid = () => {
     }
     fetchDeal()
   }, [id])
-  useEffect(() => {
-    const fetchLatestBlockHeight = async () => {
-      try {
-        const latestBlockHeight = await getLatestBlockHeight()
-        setLatestBlockHeight(latestBlockHeight)
 
-        if (latestBlockHeight >= dealData.end_block || latestBlockHeight <= dealData.start_block) {
-          setIsLive(false)
-        } else {
-          setIsLive(true)
+  const calculateTime=async(remainingSeconds)=>{
+    if (remainingSeconds <= 0) {
+      // Deal has expired
+      setExpireTime(0)
+      const expirationDate = moment().add(remainingSeconds, 'seconds')
+      setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm A'))
+      // setExpireDate(moment().format('MMMM D, YYYY [at] h:mm:ss A'));
+      clearInterval(intervalRef.current)
+    } else {
+      const expirationDate = moment().add(remainingSeconds, 'seconds')
+      setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm A'))
+      intervalRef.current = setInterval(() => {
+        if (remainingSeconds <= 0) {
+          clearInterval(intervalRef.current)
+          setExpireTime(0)
+          return
+        }
+        const duration = moment.duration(remainingSeconds, 'seconds')
+        const days = Math.floor(duration.asDays())
+        const hours = duration.hours()
+        const minutes = duration.minutes()
+        const seconds = duration.seconds()
+
+        let formattedTime = ''
+        if (days > 0) {
+          formattedTime += `${days} ${days === 1 ? 'day' : 'days'} `
+        }
+        if (hours > 0) {
+          formattedTime += `${hours} h `
+        }
+        if (minutes > 0) {
+          formattedTime += `${minutes} m `
+        }
+        if (seconds > 0) {
+          formattedTime += `${seconds} s`
         }
 
-        if (latestBlockHeight !== null && dealData.end_block !== null) {
-          let remainingSeconds = (dealData.end_block - latestBlockHeight) * 5
+        // Trim any trailing whitespace
+        formattedTime = formattedTime.trim()
+        // Set the remaining time
+        setExpireTime(formattedTime)
+        remainingSeconds -= 1
+      }, 1000)
 
-          if (remainingSeconds <= 0) {
-            // Deal has expired
-            setExpireTime(0)
-            const expirationDate = moment().add(remainingSeconds, 'seconds')
-            setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm A'))
-            // setExpireDate(moment().format('MMMM D, YYYY [at] h:mm:ss A'));
-            clearInterval(intervalRef.current)
-          } else {
-            const expirationDate = moment().add(remainingSeconds, 'seconds')
-            setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm A'))
+      return () => clearInterval(intervalRef.current)
+    }
+  }
+  useEffect(() => {
+    // const fetchLatestBlockHeight = async () => {
+    //   try {
+    //     const latestBlockHeight = await getLatestBlockHeight()
+    //     setLatestBlockHeight(latestBlockHeight)
+
+    //     if (latestBlockHeight >= dealData.end_block || latestBlockHeight <= dealData.start_block) {
+    //       setIsLive(false)
+    //     } else {
+    //       setIsLive(true)
+    //     }
+
+    //     if (latestBlockHeight !== null && dealData) {
+    //       let remainingSeconds=0;
+    //       if(latestBlockHeight<=dealData.start_block){
+    //         remainingSeconds=(dealData.start_block- latestBlockHeight) * 5
+    //       }else{
+    //         remainingSeconds=(dealData.end_block - latestBlockHeight) * 5
+    //       }
+    //       calculateTime(remainingSeconds);
+    //     }
+    //   } catch (e) {
+    //     console.error(e.message)
+    //   }
+    // }
+     
+    const fetchLatestBlockHeight = async () => {
+      try {
+        const latestBlockHeight = await getLatestBlockHeight();
+        setLatestBlockHeight(latestBlockHeight);
+    
+        if (latestBlockHeight >= dealData.end_block || latestBlockHeight <= dealData.start_block) {
+          setIsLive(false);
+        } else {
+          setIsLive(true);
+        }
+        
+         if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+        if (latestBlockHeight !== null && dealData.end_block !== null) {
+          let remainingSeconds;
+          let expirationDate;
+          if (latestBlockHeight < dealData.start_block) {
+            // Starts in functionality
+            remainingSeconds = (dealData.start_block - latestBlockHeight) * 5;
+            expirationDate = moment().add(remainingSeconds, 'seconds');
+            setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm A'));
+            
             intervalRef.current = setInterval(() => {
               if (remainingSeconds <= 0) {
-                clearInterval(intervalRef.current)
-                setExpireTime(0)
-                return
+                clearInterval(intervalRef.current);
+                setExpireTime('started');
+                fetchLatestBlockHeight(); // Recursively call to start the "closes in" timer
+                return;
               }
-
-              const duration = moment.duration(remainingSeconds, 'seconds')
-              const days = Math.floor(duration.asDays())
-              const hours = duration.hours()
-              const minutes = duration.minutes()
-              const seconds = duration.seconds()
-
-              let formattedTime = ''
+    
+              const duration = moment.duration(remainingSeconds, 'seconds');
+              const days = Math.floor(duration.asDays());
+              const hours = duration.hours();
+              const minutes = duration.minutes();
+              const seconds = duration.seconds();
+    
+              let formattedTime = '';
               if (days > 0) {
-                formattedTime += `${days} ${days === 1 ? 'day' : 'days'} `
+                formattedTime += `${days} ${days === 1 ? 'day' : 'days'} `;
               }
               if (hours > 0) {
-                formattedTime += `${hours} h `
+                formattedTime += `${hours} h `;
               }
               if (minutes > 0) {
-                formattedTime += `${minutes} m `
+                formattedTime += `${minutes} m `;
               }
               if (seconds > 0) {
-                formattedTime += `${seconds} s`
+                formattedTime += `${seconds} s`;
               }
-
-              // Trim any trailing whitespace
-              formattedTime = formattedTime.trim()
-              // Set the remaining time
-              setExpireTime(formattedTime)
-              remainingSeconds -= 1
-            }, 1000)
-
-            return () => clearInterval(intervalRef.current)
+    
+              formattedTime = formattedTime.trim();
+              setExpireTime(`starts in ${formattedTime}`);
+              remainingSeconds -= 1;
+            }, 1000);
+    
+          } else {
+            // Closes in functionality
+            remainingSeconds = (dealData.end_block - latestBlockHeight) * 5;
+            
+            if (remainingSeconds <= 0) {
+              setExpireTime(0);
+              expirationDate = moment().add(remainingSeconds, 'seconds');
+              setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm A'));
+              clearInterval(intervalRef.current);
+            } else {
+              expirationDate = moment().add(remainingSeconds, 'seconds');
+              setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm A'));
+    
+              intervalRef.current = setInterval(() => {
+                if (remainingSeconds <= 0) {
+                  clearInterval(intervalRef.current);
+                  setExpireTime(0);
+                  return;
+                }
+    
+                const duration = moment.duration(remainingSeconds, 'seconds');
+                const days = Math.floor(duration.asDays());
+                const hours = duration.hours();
+                const minutes = duration.minutes();
+                const seconds = duration.seconds();
+    
+                let formattedTime = '';
+                if (days > 0) {
+                  formattedTime += `${days} ${days === 1 ? 'day' : 'days'} `;
+                }
+                if (hours > 0) {
+                  formattedTime += `${hours} h `;
+                }
+                if (minutes > 0) {
+                  formattedTime += `${minutes} m `;
+                }
+                if (seconds > 0) {
+                  formattedTime += `${seconds} s`;
+                }
+    
+                formattedTime = formattedTime.trim();
+                // setExpireTime(formattedTime);
+                setExpireTime(`closes in ${formattedTime}`);
+                remainingSeconds -= 1;
+              }, 1000);
+              return () => clearInterval(intervalRef.current);
+            }
           }
         }
       } catch (e) {
-        console.error(e.message)
+        console.error(e.message);
       }
-    }
-
+    };
+    
     if (dealData) {
       if (parseInt(dealData.total_bid) >= parseInt(dealData.min_cap)) {
         setExpectedResult(true)
@@ -345,7 +462,7 @@ const Bid = () => {
                 <span className="border border-gray-300 rounded-lg text-sm px-3 py-0.5 mr-1.5 mb-2.5 text-neutral-600 flex items-center">
                   <i className="fa-regular fa-clock text-xs mr-1"></i>
                   {expireTime && expireTime != 0 ? (
-                    <>bidding closes in {expireTime}</>
+                    <>bidding {expireTime}</>
                   ) : (
                     <>bidding closed</>
                   )}
@@ -407,7 +524,7 @@ const Bid = () => {
                     ></div>
                   </div>
                   <span className="text-xs text-gray-600">
-                    {expireTime && expireTime != 0 ? <>Expires in {expireTime}</> : <>Expired</>}|{' '}
+                    {expireTime && expireTime != 0 ? <>{expireTime}</> : <>Expired</>}|{' '}
                     {expireDate}
                     {/* April 18, 2024 at 4:30 PM */}
                   </span>
