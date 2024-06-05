@@ -5,8 +5,12 @@ import { Link } from "react-router-dom";
 import icons from './assets/icons.json';
 import Deal from "./Deal";
 import { getUser } from './GetUser';
+import Modal from "./Modal";
+import { useState } from "react";
+
 const MyBidItem = ({ dealTitle, bidAmount, bidId, bidPrice, dealId, onBidRemoved, bid_token_denom, deal_token_denom }) => {
   const address = localStorage.getItem('walletaddress')
+  const [showModal, setShowModal] = useState(false);
   // console.log("bid is:",bid);
   console.log("bidId is:", bidId);
   console.log("dealId is:", dealId);
@@ -14,18 +18,33 @@ const MyBidItem = ({ dealTitle, bidAmount, bidId, bidPrice, dealId, onBidRemoved
   //console.log("dealtoken denom is:",dealDetails.deal_token_denom)
   const handleRemoveBid = async () => {
     try {
-      toast.promise(
-        withdrawBid(bidId, dealId),
-        {
-          loading: 'Withdrawing Bid...',
-          success: 'Withdrawn Successfully',
-          error: (error) => <b>{JSON.stringify(error)}</b>
-        }
-      );
-      onBidRemoved(bidId); // Notify parent to remove the bid from the state
+      setShowModal(true);
     } catch (error) {
       console.error("Error removing bid: ", error);
       toast.error('Error removing bid');
+    }
+  };
+  const confirmBidWithdrawal = async () => {
+    setShowModal(false);
+    try {
+      await withdrawBid(bidId, dealId);
+      toast.success('Bid removed successfully');
+      onBidRemoved(bidId);
+      setShowModal(false);
+    } catch (error) {
+        
+    const errorMessage = error.message || error.toString();
+    const indexOfMessage = errorMessage.indexOf('message index: 0:');
+  
+    if (indexOfMessage !== -1) {
+      const specificMessage = errorMessage.substring(indexOfMessage + 'message index: 0:'.length).trim();
+      console.error('Specific error message:', specificMessage);
+      toast.error(specificMessage);
+    }
+    else{
+      toast.error(error);
+    }
+    
     }
   };
   return <div className="text-md text-black  flex justify-between px-6 py-5 ">
@@ -50,6 +69,13 @@ const MyBidItem = ({ dealTitle, bidAmount, bidId, bidPrice, dealId, onBidRemoved
         Withdraw
       </button>
     </div>
+    <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onConfirm={confirmBidWithdrawal}
+        title="Confirm Bid Withdrawal"
+        message="Are you sure you want to withdraw this bid?"
+      />
   </div>
 
 };
