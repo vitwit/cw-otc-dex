@@ -39,3 +39,25 @@ export function useFilteredDeals() {
 
   return { filtereddeals, user, error };
 }
+
+export async function fetchFilteredDeals() {
+  try {
+    const response = await getAllDeals();
+    if (response.error) {
+      throw new Error(response.error);
+    }
+
+    const { offlineSigner } = await getOfflineSignerAndCosmWasmClient();
+    const accounts = await offlineSigner.getAccounts();
+    const currentAddress = accounts[0].address;
+
+    // Assuming the deals are stored in response.deals
+    const allDeals = response.deals || [];
+    const filteredDeals = allDeals.filter(deal => deal[1].deal_creator === currentAddress);
+
+    return { filtereddeals: filteredDeals, user: currentAddress, error: null };
+  } catch (error) {
+    console.error("Error fetching or filtering deals:", error);
+    return { filtereddeals: [], user: null, error: error.message };
+  }
+}

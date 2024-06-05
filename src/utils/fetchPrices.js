@@ -1,6 +1,5 @@
 const symbolToId = {
     BTC: 'bitcoin',
-    EVMOS:'evmos',
     ETH: 'ethereum',
     USDT: 'tether',
     BNB: 'binancecoin',
@@ -13,7 +12,6 @@ const symbolToId = {
     MATIC: 'matic-network',
     AVAX: 'avalanche-2',
     LUNA: 'terra-luna',
-    ATOM: 'cosmos',
     LINK: 'chainlink',
     LTC: 'litecoin',
     TRX: 'tron',
@@ -31,7 +29,6 @@ const symbolToId = {
     AXS: 'axie-infinity',
     ALGO: 'algorand',
     ICP: 'internet-computer',
-    OSMO: 'osmosis',
     NEAR: 'near',
     GRT: 'the-graph',
     CHZ: 'chiliz',
@@ -233,6 +230,24 @@ const symbolToId = {
     AVA: 'travala',
     QKC: 'quarkchain',
     BOR: 'boringdao',
+    //COINS IN THE OPTIONS 
+    BLD: 'agoric',
+    IST: 'inter-stable-token',
+    AKT: 'akash-network',
+    ATOM: 'cosmos',
+    EVMOS: 'evmos',
+    JUNO: 'juno-network',
+    FLIX: 'omniflix-network',
+    OSMO: 'osmosis',
+    DYDX: 'dydx',
+    QCK: 'quicksilver',
+    REGEN: 'regen',
+    STARS: 'stargaze',
+    UMEE: 'umee',
+    TIA: 'tia',
+    GRAV: 'graviton',
+    MARS: 'mars-protocol'
+
 }  
 export const fetchMarketPrices = async (dealToken, bidToken) => {
     const dealTokenId = symbolToId[dealToken];

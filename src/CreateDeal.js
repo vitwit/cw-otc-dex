@@ -309,11 +309,12 @@ const CreateDeal = () => {
     toast.promise(submitDeal(), {
       loading: 'Creating Deal...',
       success: (dealId) => {
-        navigate(`/deal/${dealId}`);
-        return toast.success('Deal created successfully!');        
-        // // Show success message and then navigate'
-        // navigate(`/deal/${dealId}`) // Navigate immediately
-        // return  toast.success('Deal created successfully!') // Show success message// This message won't be shown, but it's required by the toast.promise API
+        const successMessage = 'Deal created successfully!';
+        setTimeout(() => { // Delay navigation to ensure the success message is shown
+          navigate(`/deal/${dealId}`);
+        }, 5000); // Adjust the delay time as needed
+        return successMessage;
+       //   how success message// This message won't be shown, but it's required by the toast.promise API
       },
       error: (error) => <b>{JSON.stringify(error)}!</b>
     })

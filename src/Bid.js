@@ -84,7 +84,6 @@ const Bid = () => {
       setDealData(result.deal)
       setLoading(false)
       setActivityLoading(false)
-
       const { denom: bid_denom, decimal: bid_decimal } = await fetchTokenDenom(
         result.deal.bid_token_denom
       )
@@ -105,6 +104,8 @@ const Bid = () => {
 
   
   const FetchDealDetails=async ()=>{
+    // const result = await getDeal(id)
+    // setDealData(result.deal)
     if(dealData){
       if (parseInt(dealData.total_bid) >= parseInt(dealData.min_cap)) {
         setExpectedResult(true)
@@ -350,10 +351,15 @@ const Bid = () => {
     setShowBidForm(!showBidForm)
     
   }
-
   const handlePlaceBid = async () => {
     setShowBidForm(false)
-    FetchDealDetails();
+    if(dealData){
+      const progressbar =
+      (dealData.total_bid / dealData.deal_token_amount) * 100 >= 100
+        ? 100
+        : (dealData.total_bid / dealData.deal_token_amount) * 100
+    setProgress(progressbar)
+    }
   }
   const handleCancel = () => {
     console.log('Bid canceled!')
@@ -369,7 +375,14 @@ const Bid = () => {
     })
     fetchBidStore()
     fetchMyBids()
-    FetchDealDetails();
+    if(dealData){
+      console.log("progress")
+      const progressbar =
+      (dealData.total_bid / dealData.deal_token_amount) * 100 >= 100
+        ? 100
+        : (dealData.total_bid / dealData.deal_token_amount) * 100
+    setProgress(progressbar)
+    }
     // FetchDealDetails();
   }
   const handleDealExecution = () => {
@@ -490,7 +503,7 @@ const Bid = () => {
                 <div className="px-2 md:px-14 w-full font-medium">
                   <div className="flex items-center">
                     <div className="w-full bg-gray-200 rounded-full h-3 relative">
-                      {dealData&&<div
+                      {dealData&&progress!=null&&<div
                         className="bg-green-500 h-3 rounded-full"
                         style={{ width: `${progress}%` }}
                       ></div>}
