@@ -303,23 +303,18 @@ const CreateDeal = () => {
         }
 
         return Promise.reject(error.message)
-        return Promise.reject(error.message)
       }
     }
 
     toast.promise(submitDeal(), {
       loading: 'Creating Deal...',
-      // success: (dealId) =>
-      // toast.success('Deal created successfully!', {
-      //   duration: 3000, // Adjust duration as needed
-      //   onClose: () => navigate(`/deal/${dealId}`), // Navigate after toast is closed
-      // }),
       success: (dealId) => {
-        // Show success message and then navigate'
-        navigate(`/deal/${dealId}`) // Navigate immediately
-        return  toast.success('Deal created successfully!') // Show success message// This message won't be shown, but it's required by the toast.promise API
+        navigate(`/deal/${dealId}`);
+        return toast.success('Deal created successfully!');        
+        // // Show success message and then navigate'
+        // navigate(`/deal/${dealId}`) // Navigate immediately
+        // return  toast.success('Deal created successfully!') // Show success message// This message won't be shown, but it's required by the toast.promise API
       },
-      // navigate(`/deal/${dealId}`),
       error: (error) => <b>{JSON.stringify(error)}!</b>
     })
   }

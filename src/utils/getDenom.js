@@ -23,7 +23,7 @@ const symbolToId = {
   // ARCH: { denom: 'aarch', decimal: 18 },
   // CRE: { denom: 'ucre', decimal: 6 },
   USDT:{denom:'uusdc',decimal:6}
-
+  
 
 
   // BLD: { denom: 'ubld', decimal: 6 },

@@ -28,6 +28,17 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom,dealDecimal}
         SetAvailable(0)
       }
   }
+  // useEffect(() => {
+  //   if (formRef.current) {
+  //     document.body.style.overflow = 'hidden';
+  //   } else {
+  //     document.body.style.overflow = 'unset';
+  //   }
+
+  //   return () => {
+  //     document.body.style.overflow = 'unset';
+  //   };
+  // }, []);
   const handleSubmit = async (e) => {
     e.preventDefault()
     const formData = Object.fromEntries(new FormData(formRef.current))
@@ -128,7 +139,7 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom,dealDecimal}
   }
 
   return (
-    <div className="absolute top-0 left-0 w-full h-[100vh] bg-gray-900 bg-opacity-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50  absolute top-0 left-0 w-full h-[100vh] bg-gray-900 bg-opacity-70 flex items-center justify-center">
       <div className="bg-white rounded-lg p-6 w-[550px]">
         <h2 className="text-xl font-medium mb-4">Place New Bid</h2>
         <form ref={formRef} onSubmit={handleSubmit}>

@@ -52,24 +52,30 @@ const Bid = () => {
   const calculatePercentageDifference = (dealerRate, marketRate) => {
     return ((dealerRate - marketRate) / marketRate) * 100
   }
-  useEffect(() => {
-    const getMarketRates = async () => {
-      try {
-        const prices = await fetchMarketPrices(dealDenom, bidDenom)
-        const marketExchangeRate = calculateMarketExchangeRate(
-          prices.dealTokenPrice,
-          prices.bidTokenPrice
-        )
-        setMarketRate(marketExchangeRate)
-        console.log('OSMO', prices.dealTokenPrice, 'ATOM', prices.bidTokenPrice)
-        const difference = calculatePercentageDifference(dealData.min_price, marketExchangeRate)
-        // console.log("difference",difference);
-        setPercentageDifference(difference)
-      } catch (e) {
-        setError(e.message)
-      }
+
+  const getMarketRates = async () => {
+  
+    try {
+      // console.log("called",bidDenom)
+      const prices = await fetchMarketPrices(dealDenom, bidDenom)
+      const marketExchangeRate = calculateMarketExchangeRate(
+        prices.dealTokenPrice,
+        prices.bidTokenPrice
+      )
+      setMarketRate(marketExchangeRate)
+      // console.log('OSMO', prices.dealTokenPrice, 'ATOM', prices.bidTokenPrice)
+      const difference = calculatePercentageDifference(dealData.min_price, marketExchangeRate)
+      // console.log("difference",difference);
+      setPercentageDifference(difference)
+    } catch (e) {
+      console.log('errss',e)
+      setError(e.message)
     }
-    getMarketRates()
+  }
+  useEffect(() => {
+    if(dealData){
+      getMarketRates()
+    }
   }, [dealData])
 
   const fetchDeal = async () => {
@@ -92,55 +98,26 @@ const Bid = () => {
       console.log(e.message)
     }
   }
+
   useEffect(() => {
     fetchDeal()
   }, [id])
 
-  const calculateTime = async (remainingSeconds) => {
-    if (remainingSeconds <= 0) {
-      // Deal has expired
-      setExpireTime(0)
-      const expirationDate = moment().add(remainingSeconds, 'seconds')
-      setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm A'))
-      // setExpireDate(moment().format('MMMM D, YYYY [at] h:mm:ss A'));
-      clearInterval(intervalRef.current)
-    } else {
-      const expirationDate = moment().add(remainingSeconds, 'seconds')
-      setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm A'))
-      intervalRef.current = setInterval(() => {
-        if (remainingSeconds <= 0) {
-          clearInterval(intervalRef.current)
-          setExpireTime(0)
-          return
-        }
-        const duration = moment.duration(remainingSeconds, 'seconds')
-        const days = Math.floor(duration.asDays())
-        const hours = duration.hours()
-        const minutes = duration.minutes()
-        const seconds = duration.seconds()
-
-        let formattedTime = ''
-        if (days > 0) {
-          formattedTime += `${days} ${days === 1 ? 'day' : 'days'} `
-        }
-        if (hours > 0) {
-          formattedTime += `${hours} h `
-        }
-        if (minutes > 0) {
-          formattedTime += `${minutes} m `
-        }
-        if (seconds > 0) {
-          formattedTime += `${seconds} s`
-        }
-
-        // Trim any trailing whitespace
-        formattedTime = formattedTime.trim()
-        // Set the remaining time
-        setExpireTime(formattedTime)
-        remainingSeconds -= 1
-      }, 1000)
-
-      return () => clearInterval(intervalRef.current)
+  
+  const FetchDealDetails=async ()=>{
+    if(dealData){
+      if (parseInt(dealData.total_bid) >= parseInt(dealData.min_cap)) {
+        setExpectedResult(true)
+      }
+      const progressbar =
+        (dealData.total_bid / dealData.deal_token_amount) * 100 >= 100
+          ? 100
+          : (dealData.total_bid / dealData.deal_token_amount) * 100
+      setProgress(progressbar)
+  
+      if (dealData.deal_status === 'Completed') {
+        setDealExecuted('Completed')
+      }
     }
   }
   useEffect(() => {
@@ -278,20 +255,9 @@ const Bid = () => {
       }
     }
 
+
     if (dealData) {
-      if (parseInt(dealData.total_bid) >= parseInt(dealData.min_cap)) {
-        setExpectedResult(true)
-      }
-
-      const progressbar =
-        (dealData.total_bid / dealData.deal_token_amount) * 100 >= 100
-          ? 100
-          : (dealData.total_bid / dealData.deal_token_amount) * 100
-      setProgress(progressbar)
-
-      if (dealData.deal_status === 'Completed') {
-        setDealExecuted('Completed')
-      }
+      FetchDealDetails();
       fetchLatestBlockHeight()
     }
   }, [dealData])
@@ -303,6 +269,9 @@ const Bid = () => {
       if (bidsResponse.length > 0) {
         setBidStoreData(bidsResponse)
         console.log('--->', bidsResponse)
+      }
+      else{
+        setBidStoreData([])
       }
     } catch (e) {
       console.log(e.message)
@@ -323,7 +292,7 @@ const Bid = () => {
       try {
         const { bids: bidsResponse, error } = await getBidStore(id)
         if (dealData && bidsResponse.length > 0) {
-          console.log('mine', bidsResponse)
+          // console.log('All BIDS IN MINE func', bidsResponse)
           const sortedBids = bidsResponse.sort((a, b) => {
             const priceComparison = parseInt(b[1].price) - parseInt(a[1].price)
             if (priceComparison !== 0) {
@@ -334,22 +303,21 @@ const Bid = () => {
             }
           })
 
-          console.log('hii', sortedBids)
-
+          
           let cumulativeAmount = 0
           const dealAmount = dealData.deal_token_amount // Set your deal amount here
-
+          
           // Create a map to store the bid ID and a boolean value
           const bidStatusMap = new Map()
           // Iterate through the sorted bids to calculate the cumulative amount
           sortedBids.forEach((bid) => {
             const diff = Number(dealAmount) - Number(cumulativeAmount)
-            let isWinning = 0
+            let isWinning = 0  //not wins 
             if (diff > 0) {
               if (Number(bid[1].amount) <= Number(diff)) {
-                isWinning = 1
+                isWinning = 1//might win 
               } else {
-                isWinning = 2
+                isWinning = 2 //might not win 
               }
             }
             cumulativeAmount += Number(bid[1].amount)
@@ -359,28 +327,33 @@ const Bid = () => {
           const myBids = bidsResponse.filter((bid) => bid[1].bidder === address)
           setMyBids(myBids)
           setBidStatusMap(bidStatusMap)
+          console.log('My Bids', myBids)
+        }
+        else{
+          setMyBids([])
         }
       } catch (error) {
         console.error('Error fetching my bids: ', error)
       }
     }
   }
+  window.addEventListener('keplr_keystorechange', async () => {
+    const {user,error}= await getUser();
+    localStorage.setItem('walletaddress', user)
+    setWalletAddress(localStorage.getItem('walletaddress'))
+  })
   useEffect(() => {
-    console.log('in mybids')
-    window.addEventListener('keplr_keystorechange', async () => {
-      const user = await getUser()
-      localStorage.setItem('walletaddress', user.currentAddress)
-      setWalletAddress(localStorage.getItem('walletaddress'))
-    })
-
     fetchMyBids()
+    FetchDealDetails();
   }, [id, dealData, walletAddress, showBidForm])
   const toggleBidForm = () => {
     setShowBidForm(!showBidForm)
+    
   }
 
   const handlePlaceBid = async () => {
     setShowBidForm(false)
+    FetchDealDetails();
   }
   const handleCancel = () => {
     console.log('Bid canceled!')
@@ -396,6 +369,8 @@ const Bid = () => {
     })
     fetchBidStore()
     fetchMyBids()
+    FetchDealDetails();
+    // FetchDealDetails();
   }
   const handleDealExecution = () => {
     toast.promise(executeDeal(id), {
@@ -515,12 +490,12 @@ const Bid = () => {
                 <div className="px-2 md:px-14 w-full font-medium">
                   <div className="flex items-center">
                     <div className="w-full bg-gray-200 rounded-full h-3 relative">
-                      <div
+                      {dealData&&<div
                         className="bg-green-500 h-3 rounded-full"
                         style={{ width: `${progress}%` }}
-                      ></div>
+                      ></div>}
                     </div>
-                    <span className="ml-2 text-xs text-gray-600">{progress}%</span>
+                    <span className="ml-2 text-xs text-gray-600">{progress&&progress.toFixed(0)}%</span>
                   </div>
                   <div className="text-xs text-gray-600 mt-1">
                     {expireTime && expireTime != 0 ? <>{expireTime}</> : <>Expired</>} |{' '}

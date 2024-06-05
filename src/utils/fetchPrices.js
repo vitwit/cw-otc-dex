@@ -1,5 +1,6 @@
 const symbolToId = {
     BTC: 'bitcoin',
+    EVMOS:'evmos',
     ETH: 'ethereum',
     USDT: 'tether',
     BNB: 'binancecoin',
@@ -242,6 +243,7 @@ export const fetchMarketPrices = async (dealToken, bidToken) => {
   
     const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${dealTokenId},${bidTokenId}&vs_currencies=usd`);
     const data = await response.json();
+    //  console.log("prices ",data);
     return {
       dealTokenPrice: data[dealTokenId].usd,
       bidTokenPrice: data[bidTokenId].usd,

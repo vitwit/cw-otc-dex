@@ -14,7 +14,7 @@ export const executeDeal = async (dealId) => {
           amount: '5000'
         }
       ],
-      gas: '200000'
+      gas: '250000'
     }
     const id = parseInt(dealId)
     const executeMsg = {
