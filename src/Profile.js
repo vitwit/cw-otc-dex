@@ -5,30 +5,46 @@ import { useFilteredBids } from "./hooks/useFilteredBids";
 import {useFilteredDeals} from "./hooks/useFilteredDeals";
 import MyBidItem from "./MyBidItem";
 import Deal from "./Deal";
+import { fetchFilteredBids } from "./hooks/useFilteredBids";
 import { Link } from "react-router-dom";
 import toast, { Toaster } from 'react-hot-toast';
 import { getUser } from './GetUser';
+import {fetchFilteredDeals} from "./hooks/useFilteredDeals"
 const Profile = () => {
   const { filtereddeals, user, error: dealsError } = useFilteredDeals();
-  const { bids, error: bidsError, removeBid } = useFilteredBids();
   const [deals, setDeals] = useState(null);
-  const { id } = useParams();
-  const [dealData, setDealData] = useState(null);
-  const [walletAddress, setWalletAddress] = useState(null);
-  const address = localStorage.getItem('walletaddress')
+  const [bids,setBids]=useState([]);
+  //const address = localStorage.getItem('walletaddress')
+  const [walletAddress, setWalletAddress] = useState(localStorage.getItem('walletaddress'))
 
-  useEffect(() => {
+  // useEffect(() => {
+  //     fetchData();
+  // }, [filtereddeals]);
+  const fetchData=async ()=>{
+    const { filtereddeals, user, error: dealsError } = await fetchFilteredDeals();
+    const {bids,error}=await fetchFilteredBids();
     if (filtereddeals) {
       setDeals(filtereddeals);
     }
-  }, [filtereddeals]);
+    if(bids){
+      setBids(bids);
+    }
+  }
+  useEffect(()=>{
+       fetchData();
+  },[walletAddress]);
+  window.addEventListener('keplr_keystorechange', async () => {
+    const {user,error}= await getUser();
+    localStorage.setItem('walletaddress', user)
+    setWalletAddress(localStorage.getItem('walletaddress'))
+  })
 
-  if (dealsError || bidsError) {
-    return <p>Error: {dealsError || bidsError}</p>;
-  }
-  if (bidsError) {
-    return <p>Error: {bidsError}</p>;
-  }
+  // if (dealsError || bidsError) {
+  //   return <p>Error: {dealsError || bidsError}</p>;
+  // }
+  // if (bidsError) {
+  //   return <p>Error: {bidsError}</p>;
+  // }
   const handleBidRemoved = (bidId) => {
      bids.filter((bid)=> bid.id !== bidId)
   }
@@ -105,7 +121,6 @@ const Profile = () => {
             })
           )}
         </div>
-        <Toaster />
       </div>
       </main>
     </>

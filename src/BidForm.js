@@ -28,17 +28,17 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom,dealDecimal}
         SetAvailable(0)
       }
   }
-  // useEffect(() => {
-  //   if (formRef.current) {
-  //     document.body.style.overflow = 'hidden';
-  //   } else {
-  //     document.body.style.overflow = 'unset';
-  //   }
+  useEffect(() => {
+    if (formRef.current) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
 
-  //   return () => {
-  //     document.body.style.overflow = 'unset';
-  //   };
-  // }, []);
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
   const handleSubmit = async (e) => {
     e.preventDefault()
     const formData = Object.fromEntries(new FormData(formRef.current))
