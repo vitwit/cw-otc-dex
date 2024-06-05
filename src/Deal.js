@@ -7,6 +7,8 @@ import moment from "moment";
 import { useEffect } from "react";
 import { getUser } from './GetUser';
 import { getLatestBlockHeight } from "./utils/util";
+import { fetchTokenDenom } from './utils/getDecimalByDenom';
+
 const Deal = ({ dealId, dealDetails }) => {
   const { user, response, latestblockHeight } = useAllDeals();
   const [latestBlockHeight, setLatestBlockHeight] = useState(null)
@@ -25,10 +27,24 @@ const Deal = ({ dealId, dealDetails }) => {
   const [progress, setProgress] = useState(null)
   const [upcomingTime, setUpcomingTime] = useState(null);
   const [waiting, setWaiting] = useState(false);
+  const [dealTokenDenom, setDealTokenDenom] = useState(null);
+  const [bidTokenDenom, setBidTokenDenom] = useState(null);
+  const [dealDecimal,setDealDecimal] = useState(1);
+
   const { start_block, end_block, deal_title, deal_creator, deal_token_denom, bid_token_denom, min_cap, total_bid } = dealDetails;
   //  console.log("Component",dealId,dealDetails);
   useEffect(() => {
+    const fetchTokenData = async () => {
+      const dealDenom = await fetchTokenDenom(deal_token_denom);
+      const bidDenom = await fetchTokenDenom(bid_token_denom);
+      setDealTokenDenom(dealDenom);
+      setBidTokenDenom(bidDenom);
+      setDealDecimal(dealDenom.decimal || 1);
+    };
+
     if (dealDetails) {
+      fetchTokenData();
+
       const progressbar = (dealDetails.total_bid / dealDetails.deal_token_amount) * 100
       const limitedProgress = Math.min(progressbar, 100);
       setProgress(limitedProgress)
@@ -177,23 +193,39 @@ const Deal = ({ dealId, dealDetails }) => {
     }
   }
 
+
+
+  const totalBidConverted = (parseInt(total_bid) / (10 ** dealDecimal)).toFixed(dealDecimal);
+  const formattedTotalBid = totalBidConverted.toLocaleString('en-US', { maximumFractionDigits: 20 }).replace(/\.?0+$/, '');
+
+
   return (
     <>
       <div className="col-span-1 bg-white w-full border border-gray-200 rounded-lg p-4 relative">
         <div className="flex  mb-1 justify-between">
           <div className="flex ">
+
             <span className="border border-gray-300 rounded-lg text-sm px-3 py-0.5 mr-1.5 text-neutral-600 flex items-center">
               <div className="text-xs text-slate-500 mr-3">
-                <img src={icons[deal_token_denom]} alt={deal_token_denom} className="inline-block w-4 h-4 mr-1" />
-                {dealDetails.deal_token_denom}
+                {dealTokenDenom ? (
+                  <>
+                    <img src={icons[deal_token_denom]} alt={deal_token_denom} className="inline-block w-4 h-4 mr-1" />
+                    {dealTokenDenom.denom}
+                  </>
+                ) : 'Loading...'}
               </div>
             </span>
             <span className="border border-gray-300 rounded-lg text-sm px-3 py-0.5 mr-1.5 text-neutral-600 flex items-center">
               <div className="text-xs text-slate-500 mr-3">
-                <img src={icons[bid_token_denom]} alt={bid_token_denom} className="inline-block w-4 h-4 mr-1" />
-                {dealDetails.bid_token_denom}
+                {bidTokenDenom ? (
+                  <>
+                    <img src={icons[bid_token_denom]} alt={bid_token_denom} className="inline-block w-4 h-4 mr-1" />
+                    {bidTokenDenom.denom}
+                  </>
+                ) : 'Loading...'}
               </div>
             </span>
+
           </div>
           <div className="inline-flex items-center justify-center text-white rounded text-xs items-end space-x-2">
             <div className={`relati
@@ -259,7 +291,7 @@ const Deal = ({ dealId, dealDetails }) => {
               Total bidded
             </p>
             <h4 className="text-gray-700 font-medium">
-              {dealDetails.total_bid}
+              {formattedTotalBid}
             </h4>
           </div>
         </div>
