@@ -1,4 +1,5 @@
 import Header from "./components/Header";
+import { useParams } from 'react-router-dom'
 import React, { useState, useEffect } from "react";
 import { useFilteredBids } from "./hooks/useFilteredBids";
 import {useFilteredDeals} from "./hooks/useFilteredDeals";
@@ -11,16 +12,12 @@ const Profile = () => {
   const { filtereddeals, user, error: dealsError } = useFilteredDeals();
   const { bids, error: bidsError, removeBid } = useFilteredBids();
   const [deals, setDeals] = useState(null);
-  //const address = localStorage.getItem('walletaddress')
-  const [walletAddress, setWalletAddress] = useState(null)
+  const { id } = useParams();
+  const [dealData, setDealData] = useState(null);
+  const [walletAddress, setWalletAddress] = useState(null);
+  const address = localStorage.getItem('walletaddress')
 
   useEffect(() => {
-
-    window.addEventListener('keplr_keystorechange', async () => {
-      const user = await getUser()
-      localStorage.setItem('walletaddress', user.currentAddress)
-      setWalletAddress(localStorage.getItem('walletaddress'))
-    })
     if (filtereddeals) {
       setDeals(filtereddeals);
     }
@@ -33,8 +30,17 @@ const Profile = () => {
     return <p>Error: {bidsError}</p>;
   }
   const handleBidRemoved = (bidId) => {
-     bids.filter((bid) => bid.id !== bidId)
+     bids.filter((bid)=> bid.id !== bidId)
   }
+  // window.addEventListener('keplr_keystorechange', async () => {
+  //   const {user,error}= await getUser();
+  //   localStorage.setItem('walletaddress', user)
+  //   setWalletAddress(localStorage.getItem('walletaddress'))
+  // })
+  // useEffect(() => {
+     
+  // }, [id, dealData, walletAddress])
+
 
   return (
     <>

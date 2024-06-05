@@ -6,6 +6,7 @@ export function useFilteredDeals() {
   const [filtereddeals, setDeals] = useState([]);
   const [user, setUser] = useState(null);
   const [error, setError] = useState(null);
+  const address = localStorage.getItem('walletaddress');
 
   useEffect(() => {
     const fetchAndFilterDeals = async () => {

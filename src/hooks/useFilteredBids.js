@@ -7,6 +7,7 @@ export function useFilteredBids() {
   const [bids, setBids] = useState([]);
   const [user, setUser] = useState(null);
   const [error, setError] = useState(null);
+  const address = localStorage.getItem('walletaddress');
 
   useEffect(() => {
     const fetchAndFilterBids = async () => {

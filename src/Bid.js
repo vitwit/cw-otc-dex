@@ -265,7 +265,7 @@ const Bid = () => {
   const fetchBidStore = async () => {
     try {
       const { bids: bidsResponse, error } = await getBidStore(id)
-      // console.log('len', bidsResponse.length)
+      // console.log('len', bidsResponse.lengsth)
       if (bidsResponse.length > 0) {
         setBidStoreData(bidsResponse)
         console.log('--->', bidsResponse)

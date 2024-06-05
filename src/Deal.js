@@ -167,30 +167,22 @@ const Deal = ({ dealId, dealDetails }) => {
   },[latestBlockHeight, start_block,end_block])
 
   let dealMessage = '';
-  if (status === 'Live') {
+  if (status.statusText === 'Live') 
+    {
     if (parseInt(total_bid) >= parseInt(min_cap)) {
       dealMessage = 'Deal will execute';
     } else {
       dealMessage = 'Deal will fail';
     }
   }
-  else
+  else if(status.statusText === 'Completed')
   {
-    if (dealDetails.deal_status === 'Active') {
-      if (parseInt(total_bid) >= parseInt(min_cap)) {
-        dealMessage = 'Deal will execute';
-      } else {
-        dealMessage = 'Deal will fail';
-      }
-    }
-    else {
-        if (parseInt(total_bid) >= parseInt(min_cap)) {
-          dealMessage = 'Deal will execute';
-        } else {
-          //console.log("hii");
-          dealMessage = 'Deal will fail';
-        }
-    }
+      if (parseInt(total_bid) >= parseInt(min_cap)) 
+        {
+        dealMessage = 'Deal executed';
+       } else {
+        dealMessage = 'Deal failed';
+       }
   }
 
 
@@ -296,21 +288,37 @@ const Deal = ({ dealId, dealDetails }) => {
           </div>
         </div>
         <div className="mt-7 mb-1 flex justify-start">
-          {dealMessage === 'Deal will execute' ? (
+          {dealMessage === 'Deal executed'? (
             <p className="text-green-600 text-sm">
               <i className="fa-solid fa-rocket mr-1"></i>
               <span className="font-medium">
                 {dealMessage}
               </span>
             </p>
-          ) : (
+          ) : dealMessage === 'Deal failed'? (
+          <p className="text-red-600 text-sm">
+          <i className="fa-solid fa-person-falling mr-1"></i>
+          <span className="font-medium">
+            {dealMessage}
+          </span>
+        </p> 
+        ) : dealMessage === 'Deal will execute'? (
+          <p className="text-green-600 text-sm">
+          <i className="fa-solid fa-rocket mr-1"></i>
+          <span className="font-medium">
+            {dealMessage}
+          </span>
+        </p> 
+        ): dealMessage === 'Deal will fail'?(
             <p className="text-red-600 text-sm">
               <i className="fa-solid fa-person-falling mr-1"></i>
               <span className="font-medium">
                 {dealMessage}
               </span>
             </p>
-          )}
+          ):
+          null
+          }
         </div>
       </div>
     </>
