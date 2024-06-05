@@ -5,21 +5,19 @@ import { useState } from "react";
 import { useEffect } from "react";
 const Header = (props) => {
     const [username,setUsername]=useState(localStorage.getItem('walletaddress'));
-    useEffect(() => {
-      window.addEventListener("keplr_keystorechange", async () => {
-        // console.log("Key store in Keplr is changed. You may need to refetch the account info.")
-        const {user,error}= await getUser();
-        setUsername(user);
-        localStorage.setItem("walletaddress",user);
-        const value=localStorage.getItem("walletaddress");
-        console.log("hello",value);
-        if(value){
-            setUsername(value);       
-        }
-     })
-     
-      }, []);
 
+    window.addEventListener("keplr_keystorechange", async () => {
+      // console.log("Key store in Keplr is changed. You may need to refetch the account info.")
+      const {user,error}= await getUser();
+      console.log("userrr",user);
+      setUsername(user);
+      localStorage.setItem("walletaddress",user);
+      const value=localStorage.getItem("walletaddress");
+      console.log("hello",value);
+      if(value){
+          setUsername(value);       
+      }
+   })
     const handleConnectWallet = async () => {
         // Simulating the user being fetched from a service
         try{

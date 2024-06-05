@@ -17,12 +17,15 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom,dealDecimal}
 
   const fetchBalance=async ()=>{
       const { denom: bid_denom, decimal: bid_decimal } = await fetchTokenDetails(bidDenom)
-      const address=localStorage.getItem('walletaddress');
+      let address=localStorage.getItem('walletaddress');
       if(address){
         console.log("erro",address);
         const balance=await getUserBalancebyDenom(address,bid_denom,bid_decimal);
         console.log("erross");
         SetAvailable(balance.balance)
+      }
+      else{
+        SetAvailable(0)
       }
   }
   const handleSubmit = async (e) => {
@@ -32,7 +35,9 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom,dealDecimal}
     if (!localStorage.getItem('walletaddress')) {
       return toast.error('Connect Your Wallet to Place Bid')
     }
-
+    if (localStorage.getItem('walletaddress')===dealData.deal_creator) {
+      return toast.error('Deal Creator cannot place the bid')
+    }
     // Validate form fields
     if (!amount) {
       setAmountError('Enter Amount')

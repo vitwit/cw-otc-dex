@@ -79,6 +79,9 @@ export async function getUserBalancebyDenom(address,denom,decimal) {
         'linear-gradient(180deg, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0) 100%)',
     },
   }
+  if(!window.keplr){
+    return {balance:0}
+  }
   window.keplr.experimentalSuggestChain(chain_config);
   const chainId = AppConstants.CHAIN_ID;
   await window.keplr.enable(chainId);
@@ -87,6 +90,7 @@ export async function getUserBalancebyDenom(address,denom,decimal) {
     gasPrice: 100000,
   });
   if(!address||!denom){
+    console.log("fghjkl")
     return {balance:0};
   }
   const balance = await CosmWasmClient.getBalance(address, denom);

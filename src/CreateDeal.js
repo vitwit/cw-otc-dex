@@ -58,12 +58,21 @@ const CreateDeal = () => {
         if (!value) {
           error = 'Enter Start Date'
           valid = false
+        }else if (new Date(value) < new Date()) {
+          error = 'Date should not be less than Current Date';
+          valid = false;
         }
         break
       case 'bidEndDate':
         if (!value) {
           error = 'Enter bid End date'
           valid = false
+        }else if (new Date(value) < new Date()) {
+          error = 'Date should be less than Current Date';
+          valid = false;
+        }else if (formData.bidStartDate!=null&&new Date(value) < new Date(formData.bidStartDate)){
+          error = 'Date should be greater that Start Date'
+          valid = false;
         }
         break
       case 'tokenName':
@@ -138,6 +147,7 @@ const CreateDeal = () => {
     }
     return allFieldsValid // Return true if all fields are valid, false otherwise
   }
+  
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData((prevFormData) => ({ ...prevFormData, [name]: value }))
@@ -414,25 +424,25 @@ const CreateDeal = () => {
                     <option value="IST">IST</option>
                     <option value="AKT">AKT</option>
                     <option value="ATOM">ATOM</option>
-                    <option value="DSM">DSM</option>
+                    {/* <option value="DSM">DSM</option> */}
                     <option value="EVMOS">EVMOS</option>
                     <option value="JUNO">JUNO</option>
                     <option value="FLIX">FLIX</option>
                     <option value="OSMO">OSMO</option>
-                    <option value="PASG">PASG</option>
+                    {/* <option value="PASG">PASG</option> */}
                     <option value="DYDX">DYDX</option>
                     <option value="QCK">QCK</option>
                     <option value="REGEN">REGEN</option>
                     <option value="STARS">STARS</option>
-                    <option value="DYM">DYM</option>
+                    {/* <option value="DYM">DYM</option> */}
                     <option value="UMEE">UMEE</option>
                     <option value="TIA">TIA</option>
-                    <option value="QSR">QSR</option>
-                    <option value="CMDX">CMDX</option>
+                    {/* <option value="QSR">QSR</option> */}
+                    {/* <option value="CMDX">CMDX</option> */}
                     <option value="GRAV">GRAV</option>
                     <option value="MARS">MARS</option>
-                    <option value="ARCH">ARCH</option>
-                    <option value="CRE">CRE</option>
+                    {/* <option value="ARCH">ARCH</option> */}
+                    {/* <option value="CRE">CRE</option> */}
                   </select>
                   {errors.tokenName && (
                     <p className="text-red-500 text-xs mt-1">{errors.tokenName}</p>
@@ -448,7 +458,7 @@ const CreateDeal = () => {
                       Deal Amount <small className="text-red-600">*</small>
                     </label>
 
-                    {dealBalance && (
+                    {dealBalance!=null && (
                       <div className="flex  w-full justify-end ">
                         <div className="text-sm mt-1">Available Balance :</div>
                         <div className="text-sm mt-1">
@@ -499,9 +509,9 @@ const CreateDeal = () => {
                     <option value="ATOM" disabled={dealToken === 'ATOM'}>
                       ATOM
                     </option>
-                    <option value="DSM" disabled={dealToken === 'DSM'}>
+                    {/* <option value="DSM" disabled={dealToken === 'DSM'}>
                       DSM
-                    </option>
+                    </option> */}
                     <option value="EVMOS" disabled={dealToken === 'EVMOS'}>
                       EVMOS
                     </option>
@@ -514,9 +524,9 @@ const CreateDeal = () => {
                     <option value="OSMO" disabled={dealToken === 'OSMO'}>
                       OSMO
                     </option>
-                    <option value="PASG" disabled={dealToken === 'PASG'}>
+                    {/* <option value="PASG" disabled={dealToken === 'PASG'}>
                       PASG
-                    </option>
+                    </option> */}
                     <option value="DYDX" disabled={dealToken === 'DYDX'}>
                       DYDX
                     </option>
@@ -529,33 +539,33 @@ const CreateDeal = () => {
                     <option value="STARS" disabled={dealToken === 'STARS'}>
                       STARS
                     </option>
-                    <option value="DYM" disabled={dealToken === 'DYM'}>
+                    {/* <option value="DYM" disabled={dealToken === 'DYM'}>
                       DYM
-                    </option>
+                    </option> */}
                     <option value="UMEE" disabled={dealToken === 'UMEE'}>
                       UMEE
                     </option>
                     <option value="TIA" disabled={dealToken === 'TIA'}>
                       TIA
                     </option>
-                    <option value="QSR" disabled={dealToken === 'QSR'}>
+                    {/* <option value="QSR" disabled={dealToken === 'QSR'}>
                       QSR
-                    </option>
-                    <option value="CMDX" disabled={dealToken === 'CMDX'}>
+                    </option> */}
+                    {/* <option value="CMDX" disabled={dealToken === 'CMDX'}>
                       CMDX
-                    </option>
+                    </option> */}
                     <option value="GRAV" disabled={dealToken === 'GRAV'}>
                       GRAV
                     </option>
                     <option value="MARS" disabled={dealToken === 'MARS'}>
                       MARS
                     </option>
-                    <option value="ARCH" disabled={dealToken === 'ARCH'}>
+                    {/* <option value="ARCH" disabled={dealToken === 'ARCH'}>
                       ARCH
                     </option>
                     <option value="CRE" disabled={dealToken === 'CRE'}>
                       CRE
-                    </option>
+                    </option> */}
                   </select>
                   {errors.exchangeToken && (
                     <p className="text-red-500 text-xs mt-1">{errors.exchangeToken}</p>

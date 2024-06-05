@@ -38,6 +38,7 @@ const Bid = () => {
   const [dealDenom, setDealDenom] = useState(null)
   const [bidDenom, setBidDenom] = useState(null)
   const [dealDecimal, setDealDecimal] = useState(null)
+  const [activate, setActivate] = useState(null)
   const address = localStorage.getItem('walletaddress')
 
   const [marketRate, setMarketRate] = useState(null)
@@ -71,30 +72,31 @@ const Bid = () => {
     getMarketRates()
   }, [dealData])
 
-  useEffect(() => {
-    const fetchDeal = async () => {
-      try {
-        const result = await getDeal(id)
-        setDealData(result.deal)
-        setLoading(false)
-        setActivityLoading(false)
-        const { denom: bid_denom, decimal: bid_decimal } = await fetchTokenDenom(
-          result.deal.bid_token_denom
-        )
-        setBidDenom(bid_denom)
-        const { denom: deal_denom, decimal: deal_decimal } = await fetchTokenDenom(
-          result.deal.deal_token_denom
-        )
-        setDealDenom(deal_denom)
-        setDealDecimal(deal_decimal)
-      } catch (e) {
-        console.log(e.message)
-      }
+  const fetchDeal = async () => {
+    try {
+      const result = await getDeal(id)
+      setDealData(result.deal)
+      setLoading(false)
+      setActivityLoading(false)
+
+      const { denom: bid_denom, decimal: bid_decimal } = await fetchTokenDenom(
+        result.deal.bid_token_denom
+      )
+      setBidDenom(bid_denom)
+      const { denom: deal_denom, decimal: deal_decimal } = await fetchTokenDenom(
+        result.deal.deal_token_denom
+      )
+      setDealDenom(deal_denom)
+      setDealDecimal(deal_decimal)
+    } catch (e) {
+      console.log(e.message)
     }
+  }
+  useEffect(() => {
     fetchDeal()
   }, [id])
 
-  const calculateTime=async(remainingSeconds)=>{
+  const calculateTime = async (remainingSeconds) => {
     if (remainingSeconds <= 0) {
       // Deal has expired
       setExpireTime(0)
@@ -166,117 +168,116 @@ const Bid = () => {
     //     console.error(e.message)
     //   }
     // }
-     
+
     const fetchLatestBlockHeight = async () => {
       try {
-        const latestBlockHeight = await getLatestBlockHeight();
-        setLatestBlockHeight(latestBlockHeight);
-    
-        if (latestBlockHeight >= dealData.end_block || latestBlockHeight <= dealData.start_block) {
-          setIsLive(false);
+        const latestBlockHeight = await getLatestBlockHeight()
+        setLatestBlockHeight(latestBlockHeight)
+
+        if (latestBlockHeight >= dealData.start_block && latestBlockHeight <= dealData.end_block) {
+          setIsLive(true)
         } else {
-          setIsLive(true);
+          setIsLive(false)
         }
-        
-         if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current)
+        }
         if (latestBlockHeight !== null && dealData.end_block !== null) {
-          let remainingSeconds;
-          let expirationDate;
+          let remainingSeconds
+          let expirationDate
           if (latestBlockHeight < dealData.start_block) {
             // Starts in functionality
-            remainingSeconds = (dealData.start_block - latestBlockHeight) * 5;
-            expirationDate = moment().add(remainingSeconds, 'seconds');
-            setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm A'));
-            
+            remainingSeconds = (dealData.start_block - latestBlockHeight) * 5
+            expirationDate = moment().add(remainingSeconds, 'seconds')
+            setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm A'))
+
             intervalRef.current = setInterval(() => {
               if (remainingSeconds <= 0) {
-                clearInterval(intervalRef.current);
-                setExpireTime('started');
-                fetchLatestBlockHeight(); // Recursively call to start the "closes in" timer
-                return;
+                clearInterval(intervalRef.current)
+                setExpireTime('started')
+                fetchLatestBlockHeight() // Recursively call to start the "closes in" timer
+                return
               }
-    
-              const duration = moment.duration(remainingSeconds, 'seconds');
-              const days = Math.floor(duration.asDays());
-              const hours = duration.hours();
-              const minutes = duration.minutes();
-              const seconds = duration.seconds();
-    
-              let formattedTime = '';
+
+              const duration = moment.duration(remainingSeconds, 'seconds')
+              const days = Math.floor(duration.asDays())
+              const hours = duration.hours()
+              const minutes = duration.minutes()
+              const seconds = duration.seconds()
+
+              let formattedTime = ''
               if (days > 0) {
-                formattedTime += `${days} ${days === 1 ? 'day' : 'days'} `;
+                formattedTime += `${days} ${days === 1 ? 'day' : 'days'} `
               }
               if (hours > 0) {
-                formattedTime += `${hours} h `;
+                formattedTime += `${hours} h `
               }
               if (minutes > 0) {
-                formattedTime += `${minutes} m `;
+                formattedTime += `${minutes} m `
               }
               if (seconds > 0) {
-                formattedTime += `${seconds} s`;
+                formattedTime += `${seconds} s`
               }
-    
-              formattedTime = formattedTime.trim();
-              setExpireTime(`starts in ${formattedTime}`);
-              remainingSeconds -= 1;
-            }, 1000);
-    
+
+              formattedTime = formattedTime.trim()
+              setExpireTime(`starts in ${formattedTime}`)
+              remainingSeconds -= 1
+            }, 1000)
           } else {
             // Closes in functionality
-            remainingSeconds = (dealData.end_block - latestBlockHeight) * 5;
-            
+            remainingSeconds = (dealData.end_block - latestBlockHeight) * 5
+
             if (remainingSeconds <= 0) {
-              setExpireTime(0);
-              expirationDate = moment().add(remainingSeconds, 'seconds');
-              setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm A'));
-              clearInterval(intervalRef.current);
+              setExpireTime(0)
+              expirationDate = moment().add(remainingSeconds, 'seconds')
+              setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm A'))
+              clearInterval(intervalRef.current)
             } else {
-              expirationDate = moment().add(remainingSeconds, 'seconds');
-              setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm A'));
-    
+              expirationDate = moment().add(remainingSeconds, 'seconds')
+              setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm A'))
+
               intervalRef.current = setInterval(() => {
                 if (remainingSeconds <= 0) {
-                  clearInterval(intervalRef.current);
-                  setExpireTime(0);
-                  return;
+                  clearInterval(intervalRef.current)
+                  setExpireTime(0)
+                  return
                 }
-    
-                const duration = moment.duration(remainingSeconds, 'seconds');
-                const days = Math.floor(duration.asDays());
-                const hours = duration.hours();
-                const minutes = duration.minutes();
-                const seconds = duration.seconds();
-    
-                let formattedTime = '';
+
+                const duration = moment.duration(remainingSeconds, 'seconds')
+                const days = Math.floor(duration.asDays())
+                const hours = duration.hours()
+                const minutes = duration.minutes()
+                const seconds = duration.seconds()
+
+                let formattedTime = ''
                 if (days > 0) {
-                  formattedTime += `${days} ${days === 1 ? 'day' : 'days'} `;
+                  formattedTime += `${days} ${days === 1 ? 'day' : 'days'} `
                 }
                 if (hours > 0) {
-                  formattedTime += `${hours} h `;
+                  formattedTime += `${hours} h `
                 }
                 if (minutes > 0) {
-                  formattedTime += `${minutes} m `;
+                  formattedTime += `${minutes} m `
                 }
                 if (seconds > 0) {
-                  formattedTime += `${seconds} s`;
+                  formattedTime += `${seconds} s`
                 }
-    
-                formattedTime = formattedTime.trim();
+
+                formattedTime = formattedTime.trim()
                 // setExpireTime(formattedTime);
-                setExpireTime(`closes in ${formattedTime}`);
-                remainingSeconds -= 1;
-              }, 1000);
-              return () => clearInterval(intervalRef.current);
+                setExpireTime(`closes in ${formattedTime}`)
+                remainingSeconds -= 1
+              }, 1000)
+              return () => clearInterval(intervalRef.current)
             }
           }
         }
       } catch (e) {
-        console.error(e.message);
+        console.error(e.message)
       }
-    };
-    
+    }
+
     if (dealData) {
       if (parseInt(dealData.total_bid) >= parseInt(dealData.min_cap)) {
         setExpectedResult(true)
@@ -300,18 +301,17 @@ const Bid = () => {
       const { bids: bidsResponse, error } = await getBidStore(id)
       // console.log('len', bidsResponse.length)
       if (bidsResponse.length > 0) {
-
         setBidStoreData(bidsResponse)
-        console.log("--->",bidsResponse);
+        console.log('--->', bidsResponse)
       }
     } catch (e) {
       console.log(e.message)
     }
   }
   useEffect(() => {
-    console.log("in bidstore")
+    console.log('in bidstore')
     fetchBidStore()
-  }, [id,showBidForm])
+  }, [id, showBidForm])
 
   const fetchMyBids = async () => {
     // if(walletAddress!= localStorage.getItem('walletaddress')){
@@ -366,15 +366,15 @@ const Bid = () => {
     }
   }
   useEffect(() => {
-    console.log("in mybids")
+    console.log('in mybids')
     window.addEventListener('keplr_keystorechange', async () => {
       const user = await getUser()
       localStorage.setItem('walletaddress', user.currentAddress)
       setWalletAddress(localStorage.getItem('walletaddress'))
     })
-  
+
     fetchMyBids()
-  }, [id, dealData, walletAddress,showBidForm])
+  }, [id, dealData, walletAddress, showBidForm])
   const toggleBidForm = () => {
     setShowBidForm(!showBidForm)
   }
@@ -461,11 +461,7 @@ const Bid = () => {
                 </span>
                 <span className="border border-gray-300 rounded-lg text-sm px-3 py-0.5 mr-1.5 mb-2.5 text-neutral-600 flex items-center">
                   <i className="fa-regular fa-clock text-xs mr-1"></i>
-                  {expireTime && expireTime != 0 ? (
-                    <>bidding {expireTime}</>
-                  ) : (
-                    <>bidding closed</>
-                  )}
+                  {expireTime && expireTime != 0 ? <>bidding {expireTime}</> : <>bidding closed</>}
                 </span>
               </div>
 
@@ -477,7 +473,7 @@ const Bid = () => {
                 <p className="w-1/2 md:w-1/3 font-['Raleway']  text-start">Deal Token Amount</p>
                 <div className="text-gray-600 font-medium ml-1">
                   {/* 78%/60% */}
-                  {dealData && dealData.deal_token_amount/(10**dealDecimal)}
+                  {dealData && dealData.deal_token_amount / 10 ** dealDecimal}
                 </div>
                 <div className="text-gray-600 font-medium ml-1">
                   {/* 78%/60% */}
@@ -516,25 +512,27 @@ const Bid = () => {
               </div>
               <div className="w-full mt-5 flex items-center">
                 <p className="w-1/2 md:w-1/3 font-['Raleway'] text-start">Progress</p>
-                <div className="text-gray-600 px-2 md:px-14 w-full font-medium">
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div
-                      className="bg-green-500 h-3 rounded-full"
-                      style={{ width: `${progress}%` }}
-                    ></div>
+                <div className="px-2 md:px-14 w-full font-medium">
+                  <div className="flex items-center">
+                    <div className="w-full bg-gray-200 rounded-full h-3 relative">
+                      <div
+                        className="bg-green-500 h-3 rounded-full"
+                        style={{ width: `${progress}%` }}
+                      ></div>
+                    </div>
+                    <span className="ml-2 text-xs text-gray-600">{progress}%</span>
                   </div>
-                  <span className="text-xs text-gray-600">
-                    {expireTime && expireTime != 0 ? <>{expireTime}</> : <>Expired</>}|{' '}
+                  <div className="text-xs text-gray-600 mt-1">
+                    {expireTime && expireTime != 0 ? <>{expireTime}</> : <>Expired</>} |{' '}
                     {expireDate}
-                    {/* April 18, 2024 at 4:30 PM */}
-                  </span>
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="mt-5 bg-white px-5 py-3 border border-gray-200 rounded-lg h-[400px]">
               <div className="grid">
-              {bidStoreData&&<BidsOverview data={bidStoreData} deal_decimal={dealDecimal}/>}
+                {bidStoreData && <BidsOverview data={bidStoreData} deal_decimal={dealDecimal} />}
                 {/* <div className="">
                   <h4 className="text-lg">Bids overview</h4>
 
@@ -591,11 +589,15 @@ const Bid = () => {
                 >
                   Execute Deal
                 </button>
-              ) : (
+              ) : isLive && isLive ? (
                 <button
                   onClick={toggleBidForm}
                   className="mt-4 w-full md:w-2/3 border py-1.5 rounded-xl border border-green-500 hover:bg-green-500 text-white-600"
                 >
+                  Place new bid
+                </button>
+              ) : (
+                <button className="mt-4 w-full md:w-2/3 border py-1.5 rounded-xl border border-green-500 text-white-600">
                   Place new bid
                 </button>
               )}

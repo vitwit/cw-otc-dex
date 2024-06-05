@@ -1,13 +1,18 @@
-import { getOfflineSignerAndCosmWasmClient } from "../GetClient";
+
 import { AppConstants } from "../config/constant";
+import { CosmWasmClient } from "cosmwasm";
 export const getDeal=async (id)=>{
     try{
-        const { offlineSigner, CosmWasmClient } = await getOfflineSignerAndCosmWasmClient();
+
+        const  client = await CosmWasmClient.connect(AppConstants.RPC_URL)
         const contractAddress = AppConstants.CONTRACT_ADDRESS
-        const query = {
+        const queryMessage = {
           "get_deal": {"id":`${id}`}
         };
-        const response = await CosmWasmClient.queryClient.wasm.queryContractSmart(contractAddress, query);
+        const response= await client.queryClient.wasm.queryContractSmart(
+            contractAddress,
+            queryMessage
+          )
         return response
     }
     catch(error){   
