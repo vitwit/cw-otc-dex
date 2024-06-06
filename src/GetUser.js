@@ -93,7 +93,10 @@ export async function getUser() {
   //   gasPrice:100000
   // });
   let accounts = await offlineSigner.getAccounts();
-  const currentAddress = accounts[0].address;
+  const currentAddress = accounts?.[0].address;
+  if(!currentAddress){
+    return { user:'',error:'No accounts found'};
+  }
  
   return { user:currentAddress,error:''};
 }
