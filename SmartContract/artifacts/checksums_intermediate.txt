@@ -1,1 +1,1 @@
-bb015a2dd52483c099f56260633124f56503a95f848a37d35e81093f9de05f3f  ./target/wasm32-unknown-unknown/release/cw_dotc.wasm
+2770821d17096d332f8ebb9b2aa301811d3f262cc488b2eeaa76b77c3657e40a  ./target/wasm32-unknown-unknown/release/cw_dotc.wasm

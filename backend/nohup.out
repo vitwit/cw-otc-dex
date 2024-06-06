@@ -1,0 +1,50 @@
+Connected to the database!
+{"level":"info","time":1715851731,"message":"REST server started on 8000 port"}
+signal: interrupt
+Connected to the database!
+{"level":"info","time":1715851780,"message":"REST server started on 8000 port"}
+signal: interrupt
+Connected to the database!
+{"level":"info","time":1715851869,"message":"REST server started on 8000 port"}
+signal: terminated
+Connected to the database!
+{"level":"info","time":1715853324,"message":"REST server started on 8000 port"}
+New row ID: 1
+signal: terminated
+Connected to the database!
+{"level":"info","time":1715853495,"message":"REST server started on 8000 port"}
+signal: terminated
+# github.com/vitwit/dots/backend/handler
+handler/dealsHandler.go:83:9: deal.Description undefined (type types.Deal has no field or method Description)
+handler/dealsHandler.go:84:9: deal.Title undefined (type types.Deal has no field or method Title)
+handler/dealsHandler.go:146:9: deal.Description undefined (type types.Deal has no field or method Description)
+handler/dealsHandler.go:147:9: deal.Title undefined (type types.Deal has no field or method Title)
+# github.com/vitwit/dots/backend/handler
+handler/dealsHandler.go:83:9: deal.Description undefined (type types.Deal has no field or method Description)
+handler/dealsHandler.go:84:9: deal.Title undefined (type types.Deal has no field or method Title)
+handler/dealsHandler.go:146:9: deal.Description undefined (type types.Deal has no field or method Description)
+handler/dealsHandler.go:147:9: deal.Title undefined (type types.Deal has no field or method Title)
+Connected to the database!
+{"level":"info","time":1715854532,"message":"REST server started on 8000 port"}
+signal: terminated
+Connected to the database!
+{"level":"info","time":1715854944,"message":"REST server started on 8000 port"}
+Error inserting row: pq: column "description" of relation "deal" does not exist
+New row ID: 0
+Error inserting row: pq: column "description" of relation "deal" does not exist
+New row ID: 0
+Error inserting row: pq: column "description" of relation "deal" does not exist
+New row ID: 0
+Error inserting row: pq: column "description" of relation "deal" does not exist
+New row ID: 0
+Error inserting row: pq: column "description" of relation "deal" does not exist
+New row ID: 0
+Error inserting row: pq: column "description" of relation "deal" does not exist
+New row ID: 0
+signal: terminated
+Connected to the database!
+{"level":"info","time":1715861074,"message":"REST server started on 8000 port"}
+New row ID: 4
+New row ID: 5
+New row ID: 6
+New row ID: 7
