@@ -54,7 +54,6 @@ const Bid = () => {
   }
 
   const getMarketRates = async () => {
-  
     try {
       // console.log("called",bidDenom)
       const prices = await fetchMarketPrices(dealDenom, bidDenom)
@@ -68,12 +67,12 @@ const Bid = () => {
       // console.log("difference",difference);
       setPercentageDifference(difference)
     } catch (e) {
-      console.log('errss',e)
+
       setError(e.message)
     }
   }
   useEffect(() => {
-    if(dealData){
+    if (dealData) {
       getMarketRates()
     }
   }, [dealData])
@@ -102,11 +101,10 @@ const Bid = () => {
     fetchDeal()
   }, [id])
 
-  
-  const FetchDealDetails=async ()=>{
+  const FetchDealDetails = async () => {
     // const result = await getDeal(id)
     // setDealData(result.deal)
-    if(dealData){
+    if (dealData) {
       if (parseInt(dealData.total_bid) >= parseInt(dealData.min_cap)) {
         setExpectedResult(true)
       }
@@ -115,7 +113,7 @@ const Bid = () => {
           ? 100
           : (dealData.total_bid / dealData.deal_token_amount) * 100
       setProgress(progressbar)
-  
+
       if (dealData.deal_status === 'Completed') {
         setDealExecuted('Completed')
       }
@@ -256,9 +254,8 @@ const Bid = () => {
       }
     }
 
-
     if (dealData) {
-      FetchDealDetails();
+      // FetchDealDetails();
       fetchLatestBlockHeight()
     }
   }, [dealData])
@@ -270,8 +267,7 @@ const Bid = () => {
       if (bidsResponse.length > 0) {
         setBidStoreData(bidsResponse)
         console.log('--->', bidsResponse)
-      }
-      else{
+      } else {
         setBidStoreData([])
       }
     } catch (e) {
@@ -279,7 +275,6 @@ const Bid = () => {
     }
   }
   useEffect(() => {
-    console.log('in bidstore')
     fetchBidStore()
   }, [id, showBidForm])
 
@@ -304,33 +299,29 @@ const Bid = () => {
             }
           })
 
-          
           let cumulativeAmount = 0
           const dealAmount = dealData.deal_token_amount // Set your deal amount here
-          
+
           // Create a map to store the bid ID and a boolean value
           const bidStatusMap = new Map()
           // Iterate through the sorted bids to calculate the cumulative amount
           sortedBids.forEach((bid) => {
             const diff = Number(dealAmount) - Number(cumulativeAmount)
-            let isWinning = 0  //not wins 
+            let isWinning = 0 //not wins
             if (diff > 0) {
               if (Number(bid[1].amount) <= Number(diff)) {
-                isWinning = 1//might win 
+                isWinning = 1 //might win
               } else {
-                isWinning = 2 //might not win 
+                isWinning = 2 //might not win
               }
             }
             cumulativeAmount += Number(bid[1].amount)
             bidStatusMap.set(bid[0], isWinning)
           })
-          console.log('Bid Status Map:', bidStatusMap)
           const myBids = bidsResponse.filter((bid) => bid[1].bidder === address)
           setMyBids(myBids)
           setBidStatusMap(bidStatusMap)
-          console.log('My Bids', myBids)
-        }
-        else{
+        } else {
           setMyBids([])
         }
       } catch (error) {
@@ -339,34 +330,37 @@ const Bid = () => {
     }
   }
   window.addEventListener('keplr_keystorechange', async () => {
-    const {user,error}= await getUser();
+    const { user, error } = await getUser()
     localStorage.setItem('walletaddress', user)
     setWalletAddress(localStorage.getItem('walletaddress'))
   })
   useEffect(() => {
     fetchMyBids()
-    FetchDealDetails();
+    FetchDealDetails()
   }, [id, dealData, walletAddress, showBidForm])
   const toggleBidForm = () => {
     setShowBidForm(!showBidForm)
-    
   }
   const handlePlaceBid = async () => {
     setShowBidForm(false)
-    if(dealData){
+    const result = await getDeal(id)
+    setDealData(result.deal)
+    if (dealData) {
       const progressbar =
-      (dealData.total_bid / dealData.deal_token_amount) * 100 >= 100
-        ? 100
-        : (dealData.total_bid / dealData.deal_token_amount) * 100
-    setProgress(progressbar)
+        (dealData.total_bid / dealData.deal_token_amount) * 100 >= 100
+          ? 100
+          : (dealData.total_bid / dealData.deal_token_amount) * 100
+
+  
+      setProgress(progressbar)
     }
   }
   const handleCancel = () => {
-    console.log('Bid canceled!')
+
     // Hide bid form after canceling bid
     setShowBidForm(false)
   }
-  const handleBidRemoved = (bidId) => {
+  const handleBidRemoved = async (bidId) => {
     setMyBids(myBids.filter((bid) => bid.id !== bidId))
     setBidStatusMap((prevMap) => {
       const newMap = new Map(prevMap)
@@ -375,13 +369,15 @@ const Bid = () => {
     })
     fetchBidStore()
     fetchMyBids()
-    if(dealData){
-      console.log("progress")
+    const result = await getDeal(id)
+    setDealData(result.deal)
+    if (dealData) {
+     
       const progressbar =
-      (dealData.total_bid / dealData.deal_token_amount) * 100 >= 100
-        ? 100
-        : (dealData.total_bid / dealData.deal_token_amount) * 100
-    setProgress(progressbar)
+        (dealData.total_bid / dealData.deal_token_amount) * 100 >= 100
+          ? 100
+          : (dealData.total_bid / dealData.deal_token_amount) * 100
+      setProgress(progressbar)
     }
     // FetchDealDetails();
   }
@@ -503,12 +499,16 @@ const Bid = () => {
                 <div className="px-2 md:px-14 w-full font-medium">
                   <div className="flex items-center">
                     <div className="w-full bg-gray-200 rounded-full h-3 relative">
-                      {dealData&&progress!=null&&<div
-                        className="bg-green-500 h-3 rounded-full"
-                        style={{ width: `${progress}%` }}
-                      ></div>}
+                      {dealData && progress != null && (
+                        <div
+                          className="bg-green-500 h-3 rounded-full"
+                          style={{ width: `${progress}%` }}
+                        ></div>
+                      )}
                     </div>
-                    <span className="ml-2 text-xs text-gray-600">{progress&&progress.toFixed(0)}%</span>
+                    <span className="ml-2 text-xs text-gray-600">
+                      {progress && progress.toFixed(0)}%
+                    </span>
                   </div>
                   <div className="text-xs text-gray-600 mt-1">
                     {expireTime && expireTime != 0 ? <>{expireTime}</> : <>Expired</>} |{' '}
