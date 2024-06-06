@@ -261,7 +261,9 @@ pub fn execute_place_bid(
     return Err(ContractError::DealNotExisted {});
   }
   let mut deal = DEALS.load(deps.storage, msg.deal_id)?;
-
+  if deal.deal_creator == info.sender {
+    return Err(ContractError::InvalidBidding{});
+  }
    //current height is below the start block
    if _env.block.height <= (deal.start_block as u64) {
     return Err(ContractError::DealNotOpenedForBidding{});

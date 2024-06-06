@@ -48,6 +48,8 @@ pub enum ContractError {
 
     #[error("You cannot withdraw the bid,You are not the user of this bid")] InvalidBidder {},
 
+    #[error("You cannot place the bid,You are creator of this deal")] InvalidBidding {},
+
     #[error(
         "You can't create the deal,signer and creator address not matched"
     )] InvalidDealCreator {},
