@@ -31,3 +31,5 @@ SmartContract/target
 
 *.tsbuildinfo
 .env
+.cargo
+
