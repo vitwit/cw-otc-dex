@@ -280,7 +280,7 @@ const Deal = ({ dealId, dealDetails }) => {
           </div>
           <div className="flex flex-col ">
             <p className="text-xs text-gray-500">
-              Total bidded
+              Total bids
             </p>
             <h4 className="text-gray-700 font-medium">
               {formattedTotalBid}

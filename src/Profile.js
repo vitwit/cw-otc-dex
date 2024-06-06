@@ -99,7 +99,7 @@ const Profile = () => {
             <div className="w-1/5">Actions</div>
           </div>
           {bids.length === 0 ? (
-            <div className="mx-auto text-center">
+            <div className="mx-auto text-center text-zinc-500">
               <b>No bids placed yet.</b>
             </div>
           ) : (
