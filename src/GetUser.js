@@ -1,11 +1,12 @@
 import { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
+import { AppConstants } from "./config/constant";
 export async function getUser() {
-
+  console.log("--",AppConstants.CHAIN_ID);
   const chain_config={
-    chainId: 'testnet',
+    chainId:AppConstants.CHAIN_ID,
     chainName: 'otc',
-    rest: 'http://142.93.213.125:1317',
-    rpc: 'http://142.93.213.125:26657',
+    rest: AppConstants.REST_URL,
+    rpc: AppConstants.RPC_URL,
     currencies: [
       {
         coinDenom: 'STAKE',
@@ -85,7 +86,7 @@ export async function getUser() {
      }
   } 
   window.keplr.experimentalSuggestChain(chain_config);
-  const chainId='testnet';
+  const chainId=AppConstants.CHAIN_ID;
   await window.keplr.enable(chainId);
 
   const offlineSigner = await window.getOfflineSigner(chainId);
@@ -93,7 +94,9 @@ export async function getUser() {
   //   gasPrice:100000
   // });
   let accounts = await offlineSigner.getAccounts();
+
   const currentAddress = accounts?.[0].address;
+  console.log("curr",currentAddress);
   if(!currentAddress){
     return { user:'',error:'No accounts found'};
   }

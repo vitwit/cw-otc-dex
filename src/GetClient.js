@@ -4,7 +4,7 @@ export async function getOfflineSignerAndCosmWasmClient() {
   const chain_config = {
     chainId: AppConstants.CHAIN_ID,  
     chainName: 'otc',
-    rest: 'http://142.93.213.125:1317',
+    rest: AppConstants.REST_URL,
     rpc: AppConstants.RPC_URL,
     currencies: [
       {
