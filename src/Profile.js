@@ -80,7 +80,7 @@ const Profile = () => {
               ))}
             </>
           ) : (
-            <p>No deals available</p>
+            <p className="flex item-center">No deals available</p>
           )}
         </div>
 
