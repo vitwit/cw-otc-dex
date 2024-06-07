@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import toast from 'react-hot-toast';
 import { withdrawBid } from './contractcalls/withdrawBid';
 import { Link } from "react-router-dom";
@@ -7,15 +7,29 @@ import Deal from "./Deal";
 import { getUser } from './GetUser';
 import Modal from "./Modal";
 import { useState } from "react";
+import { fetchTokenDenom } from './utils/getDecimalByDenom';
 
-const MyBidItem = ({ dealTitle, bidAmount, bidId, bidPrice, dealId, onBidRemoved, bid_token_denom, deal_token_denom }) => {
+const MyBidItem = ({ dealTitle, bidAmount, bidId, bidPrice, dealId, onBidRemoved, bid_token_denom, deal_token_denom}) => {
   const address = localStorage.getItem('walletaddress')
   const [showModal, setShowModal] = useState(false);
+  const [dealTokenDenom, setDealTokenDenom] = useState(null);
+  const [bidTokenDenom, setBidTokenDenom] = useState(null);
+  const [dealDecimal,setDealDecimal] = useState(null);
+  const [Quantity,setQuantity]=useState(null)
   // console.log("bid is:",bid);
   console.log("bidId is:", bidId);
   console.log("dealId is:", dealId);
   //console.log("dealdetails:",dealDetails);
   //console.log("dealtoken denom is:",dealDetails.deal_token_denom)
+  const fetchTokenData = async () => {
+    const dealDenom = await fetchTokenDenom(deal_token_denom);
+    const bidDenom = await fetchTokenDenom(bid_token_denom);
+    setDealTokenDenom(dealDenom.denom);
+    setBidTokenDenom(bidDenom.denom);
+    setDealDecimal(dealDenom.decimal);
+  };
+
+  fetchTokenData()
   const handleRemoveBid = async () => {
     try {
       setShowModal(true);
@@ -47,6 +61,14 @@ const MyBidItem = ({ dealTitle, bidAmount, bidId, bidPrice, dealId, onBidRemoved
     
     }
   };
+
+  const totalBidConverted = (Number(bidAmount) / (10 ** dealDecimal)).toFixed(dealDecimal);
+  console.log("deal decimal is :",dealDecimal)
+  console.log("total amount is ::",bidAmount);
+  console.log("converted bid amount is:",totalBidConverted);
+  const formattedTotalBid = totalBidConverted.toLocaleString('en-US', { maximumFractionDigits: 20 }).replace(/\.?0+$/, '');
+  console.log("formatted bid amount is:",formattedTotalBid);
+
   return <div className="text-md text-black  flex justify-between px-6 py-5 ">
     <div className="w-1/8">
       <Link to={`/deal/${dealId}`} className="text-zinc-700 pr-10 hover:text-black flex justify-start">
@@ -55,7 +77,7 @@ const MyBidItem = ({ dealTitle, bidAmount, bidId, bidPrice, dealId, onBidRemoved
     </div>
     <div className="w-1/5">{dealTitle}</div>
     <div className="w-1/5"><img src={icons[deal_token_denom]} alt={deal_token_denom} className="inline-block w-4 h-4 mr-1" />
-      {bidAmount}</div>
+      {formattedTotalBid}</div>
     <div className="w-1/5">
       <img src={icons[bid_token_denom]} alt={bid_token_denom} className="inline-block w-4 h-4 mr-1" />
       {bidPrice}
