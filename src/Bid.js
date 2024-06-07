@@ -55,7 +55,6 @@ const Bid = () => {
 
   const getMarketRates = async () => {
     try {
-      // console.log("called",bidDenom)
       const prices = await fetchMarketPrices(dealDenom, bidDenom)
       const marketExchangeRate = calculateMarketExchangeRate(
         prices.dealTokenPrice,
@@ -67,7 +66,6 @@ const Bid = () => {
       // console.log("difference",difference);
       setPercentageDifference(difference)
     } catch (e) {
-
       setError(e.message)
     }
   }
@@ -350,18 +348,17 @@ const Bid = () => {
         (dealData.total_bid / dealData.deal_token_amount) * 100 >= 100
           ? 100
           : (dealData.total_bid / dealData.deal_token_amount) * 100
-
-  
       setProgress(progressbar)
     }
   }
   const handleCancel = () => {
-
     // Hide bid form after canceling bid
     setShowBidForm(false)
   }
   const handleBidRemoved = async (bidId) => {
-    setMyBids(myBids.filter((bid) => bid.id !== bidId))
+    setMyBids((myBids) => {
+      myBids.filter((bid) => bid.id !== bidId)
+    })
     setBidStatusMap((prevMap) => {
       const newMap = new Map(prevMap)
       newMap.delete(bidId)
@@ -372,7 +369,6 @@ const Bid = () => {
     const result = await getDeal(id)
     setDealData(result.deal)
     if (dealData) {
-     
       const progressbar =
         (dealData.total_bid / dealData.deal_token_amount) * 100 >= 100
           ? 100
@@ -392,8 +388,8 @@ const Bid = () => {
     <>
       <Header />
       <div className="h-20"></div>
-      
-      <main className={`px-4 md:px-24 mt-5 md:mt-9 mb-9 ${showBidForm ? 'screen-place_bid':''}`}>
+
+      <main className={`px-4 md:px-24 mt-5 md:mt-9 mb-9 ${showBidForm ? 'screen-place_bid' : ''}`}>
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2 md:col-span-1">
             <div className="bg-white px-5 py-5 border border-gray-200 rounded-lg">
@@ -834,15 +830,15 @@ const Bid = () => {
           /> */}
         </div>
         {showBidForm && (
-        <BidForm
-          onCancel={handleCancel}
-          onPlaceBid={handlePlaceBid}
-          dealData={dealData}
-          dealId={id}
-          bidDenom={bidDenom}
-          dealDecimal={dealDecimal}
-        />
-      )}
+          <BidForm
+            onCancel={handleCancel}
+            onPlaceBid={handlePlaceBid}
+            dealData={dealData}
+            dealId={id}
+            bidDenom={bidDenom}
+            dealDecimal={dealDecimal}
+          />
+        )}
       </main>
     </>
   )

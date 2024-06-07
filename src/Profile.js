@@ -46,7 +46,20 @@ const Profile = () => {
   //   return <p>Error: {bidsError}</p>;
   // }
   const handleBidRemoved = (bidId) => {
-     bids.filter((bid)=> bid.id !== bidId)
+    console.log("bid",bidId)
+    setBids((bids) => {
+      let bids2 = bids.filter((bid)=> bid.bidId!== bidId)
+      console.log(bids2)
+      return bids2
+    })
+    console.log("bidsss",bids);
+    //  if(bids.length==0){
+    //   setBids([])
+    //  }
+    //  else{
+    //   setBids(bids)
+    //  }
+    //  setBids(bids);
   }
   // window.addEventListener('keplr_keystorechange', async () => {
   //   const {user,error}= await getUser();
@@ -90,7 +103,7 @@ const Profile = () => {
         </h3>
       </div>
       <div className="overflow-x-auto border border-gray-300 rounded-lg mt-5 bg-white">
-        <div className="min-w-full text-sm text-left text-gray-800 mb-4">
+        {bids&&<div className="min-w-full text-sm text-left text-gray-800 mb-4">
           <div className="text-xs text-gray-700 uppercase bg-gray-50 flex justify-between px-6 py-5 font-semibold">
             <div className="w-1/8">Deal id</div>
             <div className="w-1/5">Deal</div>
@@ -120,7 +133,7 @@ const Profile = () => {
               );
             })
           )}
-        </div>
+        </div>}
       </div>
       </main>
     </>
