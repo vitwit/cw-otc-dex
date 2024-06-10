@@ -5,8 +5,14 @@ export const executeDeal = async (dealId) => {
   try {
     const { offlineSigner, CosmWasmClient } = await getOfflineSignerAndCosmWasmClient()
     const contractAddress = AppConstants.CONTRACT_ADDRESS
+    if(!window.keplr){
+      return Promise.reject("Install keplr")
+    }
     let accounts = await offlineSigner.getAccounts()
     const ExecutorAddress = localStorage.getItem('walletaddress')
+    if(!ExecutorAddress ){
+      return Promise.reject("Connect Your Wallet")
+    }
     const defaultFee = {
       amount: [
         {
@@ -66,6 +72,6 @@ export const executeDeal = async (dealId) => {
       }
     }
 
-    return Promise.reject(error.message)
+    return Promise.reject(error)
   }
 }

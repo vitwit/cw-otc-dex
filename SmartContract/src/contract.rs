@@ -544,9 +544,11 @@ pub fn execute_deal(
       return Err(ContractError::DealNotExisted {});
     }
   };
-
   if(deal.deal_status=="Completed"){
-    return Err(ContractError::DealExecuted {});
+    return Err(ContractError::DealExecuted{});
+  }
+  if _info.sender.as_str() != deal.deal_creator{
+    return Err(ContractError::InvalidDealExecutor{});
   }
   //current height is less than end block height,so we can't execute deal
   if _env.block.height <= (deal.end_block as u64) {

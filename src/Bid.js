@@ -32,13 +32,13 @@ const Bid = () => {
   const [expireDate, setExpireDate] = useState(null)
   const [progress, setProgress] = useState(null)
   const [isLive, setIsLive] = useState(false)
-  const [walletAddress, setWalletAddress] = useState(null)
+  const [walletAddress, setWalletAddress] = useState(localStorage.getItem('walletaddress'))
   const [bidStatusMap, setBidStatusMap] = useState(null)
   const [expectedResult, setExpectedResult] = useState(null)
   const [dealDenom, setDealDenom] = useState(null)
   const [bidDenom, setBidDenom] = useState(null)
   const [dealDecimal, setDealDecimal] = useState(null)
-  const [activate, setActivate] = useState(null)
+  const [notActive, setNotActive] = useState(null)
   const address = localStorage.getItem('walletaddress')
 
   const [marketRate, setMarketRate] = useState(null)
@@ -103,13 +103,13 @@ const Bid = () => {
     // const result = await getDeal(id)
     // setDealData(result.deal)
     if (dealData) {
-      if (parseInt(dealData.total_bid) >= parseInt(dealData.min_cap)) {
+      if (+(dealData.total_bid/10**dealDecimal) >=+(dealData.min_cap)) {
         setExpectedResult(true)
       }
       const progressbar =
-        (dealData.total_bid / dealData.deal_token_amount) * 100 >= 100
+        (+dealData.total_bid / +dealData.deal_token_amount) * 100 >= 100
           ? 100
-          : (dealData.total_bid / dealData.deal_token_amount) * 100
+          : (+dealData.total_bid / +dealData.deal_token_amount) * 100
       setProgress(progressbar)
 
       if (dealData.deal_status === 'Completed') {
@@ -117,38 +117,20 @@ const Bid = () => {
       }
     }
   }
+  
+
+  const setStatus=async ()=>{
+    setNotActive(true)
+  }
   useEffect(() => {
-    // const fetchLatestBlockHeight = async () => {
-    //   try {
-    //     const latestBlockHeight = await getLatestBlockHeight()
-    //     setLatestBlockHeight(latestBlockHeight)
-
-    //     if (latestBlockHeight >= dealData.end_block || latestBlockHeight <= dealData.start_block) {
-    //       setIsLive(false)
-    //     } else {
-    //       setIsLive(true)
-    //     }
-
-    //     if (latestBlockHeight !== null && dealData) {
-    //       let remainingSeconds=0;
-    //       if(latestBlockHeight<=dealData.start_block){
-    //         remainingSeconds=(dealData.start_block- latestBlockHeight) * 5
-    //       }else{
-    //         remainingSeconds=(dealData.end_block - latestBlockHeight) * 5
-    //       }
-    //       calculateTime(remainingSeconds);
-    //     }
-    //   } catch (e) {
-    //     console.error(e.message)
-    //   }
-    // }
-
     const fetchLatestBlockHeight = async () => {
       try {
         const latestBlockHeight = await getLatestBlockHeight()
         setLatestBlockHeight(latestBlockHeight)
-
-        if (latestBlockHeight >= dealData.start_block && latestBlockHeight <= dealData.end_block) {
+        if (
+          Number(latestBlockHeight) >= Number(dealData.start_block) &&
+          Number(latestBlockHeight) <= Number(dealData.end_block)
+        ) {
           setIsLive(true)
         } else {
           setIsLive(false)
@@ -160,9 +142,9 @@ const Bid = () => {
         if (latestBlockHeight !== null && dealData.end_block !== null) {
           let remainingSeconds
           let expirationDate
-          if (latestBlockHeight < dealData.start_block) {
+          if (Number(latestBlockHeight) < Number(dealData.start_block)) {
             // Starts in functionality
-            remainingSeconds = (dealData.start_block - latestBlockHeight) * 5
+            remainingSeconds = (Number(dealData.start_block) - Number(latestBlockHeight)) * 5
             expirationDate = moment().add(remainingSeconds, 'seconds')
             setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm A'))
 
@@ -200,21 +182,23 @@ const Bid = () => {
             }, 1000)
           } else {
             // Closes in functionality
-            remainingSeconds = (dealData.end_block - latestBlockHeight) * 5
-
+            remainingSeconds = (Number(dealData.end_block) - Number(latestBlockHeight)) * 5
+            // remainingSeconds=10;
             if (remainingSeconds <= 0) {
               setExpireTime(0)
               expirationDate = moment().add(remainingSeconds, 'seconds')
               setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm A'))
               clearInterval(intervalRef.current)
+              
             } else {
               expirationDate = moment().add(remainingSeconds, 'seconds')
               setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm A'))
-
+              
               intervalRef.current = setInterval(() => {
                 if (remainingSeconds <= 0) {
                   clearInterval(intervalRef.current)
                   setExpireTime(0)
+                  setStatus()
                   return
                 }
 
@@ -343,13 +327,14 @@ const Bid = () => {
     setShowBidForm(false)
     const result = await getDeal(id)
     setDealData(result.deal)
-    if (dealData) {
-      const progressbar =
-        (dealData.total_bid / dealData.deal_token_amount) * 100 >= 100
-          ? 100
-          : (dealData.total_bid / dealData.deal_token_amount) * 100
-      setProgress(progressbar)
-    }
+    FetchDealDetails();
+    // if (dealData) {
+    //   const progressbar =
+    //     (+dealData.total_bid / +dealData.deal_token_amount) * 100 >= 100
+    //       ? 100
+    //       : (+dealData.total_bid /+dealData.deal_token_amount) * 100
+    //   setProgress(progressbar)
+    // }
   }
   const handleCancel = () => {
     // Hide bid form after canceling bid
@@ -357,7 +342,8 @@ const Bid = () => {
   }
   const handleBidRemoved = async (bidId) => {
     setMyBids((myBids) => {
-      myBids.filter((bid) => bid.id !== bidId)
+      let bids2=myBids.filter((bid) => bid.id !== bidId)
+       return bids2
     })
     setBidStatusMap((prevMap) => {
       const newMap = new Map(prevMap)
@@ -369,18 +355,13 @@ const Bid = () => {
     const result = await getDeal(id)
     setDealData(result.deal)
     if (dealData) {
-      const progressbar =
-        (dealData.total_bid / dealData.deal_token_amount) * 100 >= 100
-          ? 100
-          : (dealData.total_bid / dealData.deal_token_amount) * 100
-      setProgress(progressbar)
+      FetchDealDetails();
     }
-    // FetchDealDetails();
   }
   const handleDealExecution = () => {
     toast.promise(executeDeal(id), {
       loading: 'Executing Deal...',
-      success: (response) => <b>Deal Executed Successfully</b>, // Show the amount value in success message
+      success: (response) => <b>{JSON.stringify(response)}</b>, // Show the amount value in success message
       error: (error) => <b>{JSON.stringify(error)}</b>
     })
   }
@@ -528,8 +509,7 @@ const Bid = () => {
                 Dealer price: 1 {dealData && dealDenom} = {dealData && dealData.min_price}{' '}
                 {dealData && bidDenom}
               </h4>
-
-              {percentageDifference && percentageDifference > 5 ? (
+              {percentageDifference==null?<><p>Fetching Data..</p></>:(percentageDifference && percentageDifference > 5 ? (
                 <>
                   <p className="text-red-600">
                     {percentageDifference && Math.abs(percentageDifference).toFixed(2)}%{' '}
@@ -545,7 +525,7 @@ const Bid = () => {
                     {/* 20% lower than market price */}
                   </p>
                 </>
-              )}
+              ))}
 
               {loading ? (
                 <button
@@ -558,7 +538,9 @@ const Bid = () => {
                 <button className="mt-4 w-full md:w-2/3 border py-1.5 rounded-xl border border-rose-500  text-rose-600">
                   Deal Executed
                 </button>
-              ) : dealData && latestBlockHeight && latestBlockHeight >= dealData.end_block ? (
+              ) : dealData &&
+                (latestBlockHeight &&
+                +(latestBlockHeight) >= +(dealData.end_block))||notActive? (
                 <button
                   onClick={handleDealExecution}
                   className="mt-4 w-full md:w-2/3 border py-1.5 rounded-xl border border-rose-500 hover:bg-rose-500 text-rose-600 hover:text-white"
