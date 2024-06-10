@@ -358,13 +358,27 @@ const Bid = () => {
       FetchDealDetails();
     }
   }
+  // const handleDealExecution = () => {
+  //   toast.promise(executeDeal(id), {
+  //     loading: 'Executing Deal...',
+  //     success: (response) => {}
+  //     setDealExecuted(true),
+  //     <b>{JSON.stringify(response)}</b>, }// Show the amount value in success message
+  //     error: (error) => <b>{JSON.stringify(error)}</b>
+  //   })
+  // }
   const handleDealExecution = () => {
+    console.log("hjk")
     toast.promise(executeDeal(id), {
       loading: 'Executing Deal...',
-      success: (response) => <b>{JSON.stringify(response)}</b>, // Show the amount value in success message
+      success: (response) => {
+        setDealExecuted(true);
+        return "Deal Executed Successfully!"; // Show the amount value in success message
+      },
       error: (error) => <b>{JSON.stringify(error)}</b>
-    })
+    });
   }
+  
   return (
     <>
       <Header />

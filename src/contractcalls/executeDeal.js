@@ -3,11 +3,15 @@ import { AppConstants } from '../config/constant'
 export const executeDeal = async (dealId) => {
   // const { amount, price, denom } = formData;
   try {
-    const { offlineSigner, CosmWasmClient } = await getOfflineSignerAndCosmWasmClient()
-    const contractAddress = AppConstants.CONTRACT_ADDRESS
-    if(!window.keplr){
+
+    if(!window.keplr){ 
       return Promise.reject("Install keplr")
     }
+    if(!localStorage.getItem('walletaddress')){
+      return Promise.reject("Connect Your Wallet")
+    }
+    const { offlineSigner, CosmWasmClient } = await getOfflineSignerAndCosmWasmClient()
+    const contractAddress = AppConstants.CONTRACT_ADDRESS
     let accounts = await offlineSigner.getAccounts()
     const ExecutorAddress = localStorage.getItem('walletaddress')
     if(!ExecutorAddress ){
@@ -72,6 +76,6 @@ export const executeDeal = async (dealId) => {
       }
     }
 
-    return Promise.reject(error)
+    return Promise.reject(error.message)
   }
 }
