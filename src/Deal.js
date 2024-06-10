@@ -1,38 +1,30 @@
 import { Link } from "react-router-dom";
-import { useParams } from "react-router-dom";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAllDeals } from "./hooks/useAllDeals";
 import icons from './assets/icons.json';
 import moment from "moment";
-import { useEffect } from "react";
-import { getUser } from './GetUser';
 import { getLatestBlockHeight } from "./utils/util";
 import { fetchTokenDenom } from './utils/getDecimalByDenom';
 
 const Deal = ({ dealId, dealDetails }) => {
   const { user, response, latestblockHeight } = useAllDeals();
-  const [latestBlockHeight, setLatestBlockHeight] = useState(null)
-  // const [setLatestBlockHeight] = useState(null);
-  // const [getLatestBlockHeight]= useState(null);
-  const [status,setStatus] =useState({
-    statusText:'',
-    statusClass:'',
-    dotClass:''
-  })
-  const intervalRef = useRef(null)
-  const [expireTime, setExpireTime] = useState(null)
-  const [expireDate, setExpireDate] = useState(null)
-  const [upcomingDate, setUpcomingDate] = useState(null)
-  const [isLive, setIsLive] = useState(false)
-  const [progress, setProgress] = useState(null)
+  const [latestBlockHeight, setLatestBlockHeight] = useState(null);
+  const [status, setStatus] = useState({
+    statusText: '',
+    statusClass: '',
+    dotClass: ''
+  });
+  const intervalRef = useRef(null);
+  const [expireTime, setExpireTime] = useState(null);
   const [upcomingTime, setUpcomingTime] = useState(null);
   const [waiting, setWaiting] = useState(false);
+  const [progress, setProgress] = useState(null);
   const [dealTokenDenom, setDealTokenDenom] = useState(null);
   const [bidTokenDenom, setBidTokenDenom] = useState(null);
-  const [dealDecimal,setDealDecimal] = useState(1);
+  const [dealDecimal, setDealDecimal] = useState(1);
 
   const { start_block, end_block, deal_title, deal_creator, deal_token_denom, bid_token_denom, min_cap, total_bid } = dealDetails;
-  //  console.log("Component",dealId,dealDetails);
+
   useEffect(() => {
     const fetchTokenData = async () => {
       const dealDenom = await fetchTokenDenom(deal_token_denom);
@@ -45,18 +37,21 @@ const Deal = ({ dealId, dealDetails }) => {
     if (dealDetails) {
       fetchTokenData();
 
-      const progressbar = (dealDetails.total_bid / dealDetails.deal_token_amount) * 100
+      const progressbar = (dealDetails.total_bid / dealDetails.deal_token_amount) * 100;
       const limitedProgress = Math.min(progressbar, 100);
-      setProgress(limitedProgress)
-      
-      fetchLatestBlockHeight()
+      setProgress(limitedProgress);
+
+      fetchLatestBlockHeight();
+      const intervalId = setInterval(fetchLatestBlockHeight, 5000); // Fetch latest block height every 5 seconds
+
+      return () => clearInterval(intervalId); // Clear the interval on component unmount
     }
-  }, [dealDetails])
+  }, [dealDetails]);
 
   const fetchLatestBlockHeight = async () => {
     try {
-      const latestBlockHeight = await getLatestBlockHeight()
-      setLatestBlockHeight(latestBlockHeight)
+      const latestBlockHeight = await getLatestBlockHeight();
+      setLatestBlockHeight(latestBlockHeight);
       updateTimers(latestBlockHeight);
       setTimeout(() => {
         setWaiting(false);
@@ -66,30 +61,27 @@ const Deal = ({ dealId, dealDetails }) => {
     }
   };
 
-
   const updateTimers = (latestBlockHeight) => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
-    
+
     if (Number(latestBlockHeight) < Number(start_block)) {
       calculateUpcomingTime(Number(latestBlockHeight));
     } else if (Number(latestBlockHeight) >= Number(start_block) && Number(latestBlockHeight) <= Number(end_block)) {
       calculateExpireTime(Number(latestBlockHeight));
     }
-    console.log("here>>...",status)
   };
-
 
   const calculateExpireTime = (latestBlockHeight) => {
     let remainingSeconds = (Number(dealDetails.end_block) - Number(latestBlockHeight)) * 5;
 
-      intervalRef.current = setInterval(() => {
-        if (remainingSeconds <= 0) {
-          clearInterval(intervalRef.current);
-          setExpireTime(0);
-          return;
-        }
+    intervalRef.current = setInterval(() => {
+      if (remainingSeconds <= 0) {
+        clearInterval(intervalRef.current);
+        setExpireTime(0);
+        return;
+      }
 
       const duration = moment.duration(remainingSeconds, 'seconds');
       const days = Math.floor(duration.asDays());
@@ -106,22 +98,21 @@ const Deal = ({ dealId, dealDetails }) => {
       setExpireTime(formattedTime.trim());
       remainingSeconds -= 1;
     }, 1000);
-   
   };
 
   const calculateUpcomingTime = (latestBlockHeight) => {
     let upcomingSeconds = (Number(dealDetails.start_block) - Number(latestBlockHeight)) * 5;
 
-      intervalRef.current = setInterval(() => {
-        if (upcomingSeconds <= 0) {
-          clearInterval(intervalRef.current);
-          setUpcomingTime(null);
-          setWaiting(true);
-          
-          fetchLatestBlockHeight();
-        
-          return;
-        }
+    intervalRef.current = setInterval(() => {
+      if (upcomingSeconds <= 0) {
+        clearInterval(intervalRef.current);
+        setUpcomingTime(null);
+        setWaiting(true);
+
+        fetchLatestBlockHeight();
+
+        return;
+      }
 
       const duration = moment.duration(upcomingSeconds, 'seconds');
       const days = Math.floor(duration.asDays());
@@ -140,56 +131,47 @@ const Deal = ({ dealId, dealDetails }) => {
     }, 1000);
   };
 
-  useEffect(()=>{
+  useEffect(() => {
     let statusClass = 'text-yellow-500';
     let dotClass = 'hidden';
     let localStatus = ''
     if (Number(latestBlockHeight) < Number(start_block)) {
-     
-      localStatus= 'Upcoming'
+      localStatus = 'Upcoming';
       statusClass = 'text-yellow-500';
       dotClass = 'hidden';
     } else if (Number(start_block) <= Number(latestBlockHeight) && Number(latestBlockHeight) <= Number(end_block)) {
-      localStatus= 'Live'
+      localStatus = 'Live';
       statusClass = 'text-green-600';
       dotClass = 'relative inline-flex rounded-full h-2 w-2 bg-green-500';
     } else {
-      localStatus= 'Completed';
+      localStatus = 'Completed';
       statusClass = 'text-blue-600';
       dotClass = 'hidden';
     }
     setStatus({
-      statusText:localStatus,
+      statusText: localStatus,
       statusClass,
       dotClass
     })
-   
-  },[latestBlockHeight, start_block,end_block])
+  }, [latestBlockHeight, start_block, end_block]);
 
   let dealMessage = '';
-  if (status.statusText === 'Live') 
-    {
+  if (status.statusText === 'Live') {
     if (parseInt(total_bid) >= parseInt(min_cap)) {
       dealMessage = 'Deal will execute';
     } else {
       dealMessage = 'Deal will fail';
     }
+  } else if (status.statusText === 'Completed') {
+    if (parseInt(total_bid) >= parseInt(min_cap)) {
+      dealMessage = 'Deal executed';
+    } else {
+      dealMessage = 'Deal failed';
+    }
   }
-  else if(status.statusText === 'Completed')
-  {
-      if (parseInt(total_bid) >= parseInt(min_cap)) 
-        {
-        dealMessage = 'Deal executed';
-       } else {
-        dealMessage = 'Deal failed';
-       }
-  }
-
-
 
   const totalBidConverted = (parseInt(total_bid) / (10 ** dealDecimal)).toFixed(dealDecimal);
   const formattedTotalBid = totalBidConverted.toLocaleString('en-US', { maximumFractionDigits: 20 }).replace(/\.?0+$/, '');
-
 
   return (
     <>
@@ -220,8 +202,7 @@ const Deal = ({ dealId, dealDetails }) => {
 
           </div>
           <div className="inline-flex items-center justify-center text-white rounded text-xs items-end space-x-2">
-            <div className={`relati
-             ve flex items-center justify-center  ${status.dotClass}`}>
+            <div className={`relative flex items-center justify-center  ${status.dotClass}`}>
               <div className="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-green-400 opacity-75"></div>
               <div className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></div>
             </div>
@@ -229,8 +210,6 @@ const Deal = ({ dealId, dealDetails }) => {
               {status.statusText}
             </span>
           </div>
-
-
         </div>
         <Link to={`/deal/${dealId}`} className="text-gray-700 py-4 hover:text-black flex justify-start">
           <h4 className="text-xl font-medium truncate" title={dealDetails.deal_title}>
@@ -251,7 +230,7 @@ const Deal = ({ dealId, dealDetails }) => {
               ? <p className="text-lg text-zinc-500 text-center font-medium animate-pulse">bidding starts in {upcomingTime}</p>
               : status.statusText === 'Live' && dealDetails && expireTime
                 ? <span className="text-neutral-600 ">bidding closes in {expireTime}</span>
-                : <span className="text-neutral-600 ">{waiting? "Please wait...":"bidding closed"}</span>}
+                : <span className="text-neutral-600 ">{waiting ? "Please wait..." : "bidding closed"}</span>}
           </span>
         </div>
 
@@ -288,36 +267,36 @@ const Deal = ({ dealId, dealDetails }) => {
           </div>
         </div>
         <div className="mt-7 mb-1 flex justify-start">
-          {dealMessage === 'Deal executed'? (
+          {dealMessage === 'Deal executed' ? (
             <p className="text-green-600 text-sm">
               <i className="fa-solid fa-rocket mr-1"></i>
               <span className="font-medium">
                 {dealMessage}
               </span>
             </p>
-          ) : dealMessage === 'Deal failed'? (
-          <p className="text-red-600 text-sm">
-          <i className="fa-solid fa-person-falling mr-1"></i>
-          <span className="font-medium">
-            {dealMessage}
-          </span>
-        </p> 
-        ) : dealMessage === 'Deal will execute'? (
-          <p className="text-green-600 text-sm">
-          <i className="fa-solid fa-rocket mr-1"></i>
-          <span className="font-medium">
-            {dealMessage}
-          </span>
-        </p> 
-        ): dealMessage === 'Deal will fail'?(
+          ) : dealMessage === 'Deal failed' ? (
             <p className="text-red-600 text-sm">
               <i className="fa-solid fa-person-falling mr-1"></i>
               <span className="font-medium">
                 {dealMessage}
               </span>
             </p>
-          ):
-          null
+          ) : dealMessage === 'Deal will execute' ? (
+            <p className="text-green-600 text-sm">
+              <i className="fa-solid fa-rocket mr-1"></i>
+              <span className="font-medium">
+                {dealMessage}
+              </span>
+            </p>
+          ) : dealMessage === 'Deal will fail' ? (
+            <p className="text-red-600 text-sm">
+              <i className="fa-solid fa-person-falling mr-1"></i>
+              <span className="font-medium">
+                {dealMessage}
+              </span>
+            </p>
+          ) :
+            null
           }
         </div>
       </div>
