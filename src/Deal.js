@@ -42,9 +42,9 @@ const Deal = ({ dealId, dealDetails }) => {
       setProgress(limitedProgress);
 
       fetchLatestBlockHeight();
-      const intervalId = setInterval(fetchLatestBlockHeight, 5000); // Fetch latest block height every 5 seconds
+      const intervalId = setInterval(fetchLatestBlockHeight, 5000); 
 
-      return () => clearInterval(intervalId); // Clear the interval on component unmount
+      return () => clearInterval(intervalId); 
     }
   }, [dealDetails]);
 
