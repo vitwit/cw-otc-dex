@@ -19,7 +19,6 @@ export const placeBid = async (amount, price, denom, dealDenom, dealId) => {
     }
     const { denom: bid_denom, decimal: bid_decimal } = await fetchTokenDenom(denom)
     const { denom: deal_denom, decimal: deal_decimal } = await fetchTokenDenom(dealDenom)
-    console.log('deal', bid_denom)
     const id = parseInt(dealId)
     const bid_amount = amount * 10 ** deal_decimal
     const executeMsg = {
@@ -45,18 +44,16 @@ export const placeBid = async (amount, price, denom, dealDenom, dealId) => {
         }
       ]
     )
-    console.log('Execute response:', executeResponse)
+
     const txHash = executeResponse.transactionHash
-    console.log('transation hash', txHash)
+
     const response = await CosmWasmClient.queryClient.tx.getTx(txHash)
-    console.log('response of hash', response)
+
     return Promise.resolve(response)
   } catch (error) {
-    console.error('Error executing bid:', error)
     const { offlineSigner, CosmWasmClient } = await getOfflineSignerAndCosmWasmClient()
     function find64CharHex(message) {
       if (typeof message !== 'string') {
-        console.error('Input is not a string.')
         return null
       }
       const hexPattern = /[0-9A-Fa-f]{64}/g
@@ -75,7 +72,7 @@ export const placeBid = async (amount, price, denom, dealDenom, dealId) => {
         const specificMessage = errorMessage
           .substring(indexOfMessage + 'message index: 0:'.length)
           .trim()
-        console.error('Specific error message:', specificMessage)
+
         return Promise.reject(specificMessage)
       } else {
         return Promise.reject(errorMessage)

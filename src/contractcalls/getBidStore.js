@@ -15,7 +15,6 @@ export const getBidStore = async (id) => {
       )
     return { bids: response.bids, error: '' }
   } catch (error) {
-    console.log(error)
     return { bids: [], error: error.message }
    // return error
   }

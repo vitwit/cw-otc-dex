@@ -91,7 +91,7 @@ const Bid = () => {
       setDealDenom(deal_denom)
       setDealDecimal(deal_decimal)
     } catch (e) {
-      console.log(e.message)
+      // console.log(e.message)
     }
   }
 
@@ -232,7 +232,7 @@ const Bid = () => {
           }
         }
       } catch (e) {
-        console.error(e.message)
+        // console.error(e.message)
       }
     }
 
@@ -248,12 +248,12 @@ const Bid = () => {
       // console.log('len', bidsResponse.lengsth)
       if (bidsResponse.length > 0) {
         setBidStoreData(bidsResponse)
-        console.log('--->', bidsResponse)
+        // console.log('--->', bidsResponse)
       } else {
         setBidStoreData([])
       }
     } catch (e) {
-      console.log(e.message)
+      // console.log(e.message)
     }
   }
   useEffect(() => {
@@ -307,7 +307,7 @@ const Bid = () => {
           setMyBids([])
         }
       } catch (error) {
-        console.error('Error fetching my bids: ', error)
+        // console.error('Error fetching my bids: ', error)
       }
     }
   }
@@ -358,17 +358,7 @@ const Bid = () => {
       FetchDealDetails();
     }
   }
-  // const handleDealExecution = () => {
-  //   toast.promise(executeDeal(id), {
-  //     loading: 'Executing Deal...',
-  //     success: (response) => {}
-  //     setDealExecuted(true),
-  //     <b>{JSON.stringify(response)}</b>, }// Show the amount value in success message
-  //     error: (error) => <b>{JSON.stringify(error)}</b>
-  //   })
-  // }
   const handleDealExecution = () => {
-    console.log("hjk")
     toast.promise(executeDeal(id), {
       loading: 'Executing Deal...',
       success: (response) => {

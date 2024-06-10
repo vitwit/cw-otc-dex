@@ -32,16 +32,13 @@ export const withdrawBid = async (bidId, dealId) => {
       'Execute withdraw_bid',
       []
     )
-    console.log('Execute response:', executeResponse)
+
     const txHash = executeResponse.transactionHash
-    console.log('transation hash', txHash)
+
     const response = await CosmWasmClient.queryClient.tx.getTx(txHash)
-    console.log('response of hash', response)
+
     return Promise.resolve(response)
   } catch (error) {
-    // console.error('Error executing bid:', error)
-    // return Promise.reject(error.message);
-
     const errorMessage = error.message || error.toString()
     const indexOfMessage = errorMessage.indexOf('message index: 0:')
 
@@ -49,7 +46,6 @@ export const withdrawBid = async (bidId, dealId) => {
       const specificMessage = errorMessage
         .substring(indexOfMessage + 'message index: 0:'.length)
         .trim()
-      console.error('Specific error message:', specificMessage)
     }
 
     return Promise.reject(errorMessage)

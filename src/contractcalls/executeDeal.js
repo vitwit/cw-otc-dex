@@ -40,11 +40,11 @@ export const executeDeal = async (dealId) => {
       'Execute execute_deal',
       []
     )
-    console.log('Execute response:', executeResponse)
+    // console.log('Execute response:', executeResponse)
     const txHash = executeResponse.transactionHash
-    console.log('transation hash', txHash)
+    // console.log('transation hash', txHash)
     const response = await CosmWasmClient.queryClient.tx.getTx(txHash)
-    console.log('response of hash', response)
+    // console.log('response of hash', response)
     return Promise.resolve(response)
   } catch (error) {
     const { offlineSigner, CosmWasmClient } = await getOfflineSignerAndCosmWasmClient()
@@ -69,7 +69,7 @@ export const executeDeal = async (dealId) => {
         const specificMessage = errorMessage
           .substring(indexOfMessage + 'message index: 0:'.length)
           .trim()
-        console.error('Specific error message:', specificMessage)
+        // console.error('Specific error message:', specificMessage)
         return Promise.reject(specificMessage)
       } else {
         return Promise.reject(errorMessage)

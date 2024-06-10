@@ -19,7 +19,6 @@ export const getAllDeals=async ()=>
     }
     catch(error)
     {   
-        console.log(error)
         return error.message;
     }
     }
