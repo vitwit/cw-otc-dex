@@ -72,17 +72,17 @@ const Deal = ({ dealId, dealDetails }) => {
       clearInterval(intervalRef.current);
     }
     
-    if (latestBlockHeight < start_block) {
-      calculateUpcomingTime(latestBlockHeight);
-    } else if (latestBlockHeight >= start_block && latestBlockHeight <= end_block) {
-      calculateExpireTime(latestBlockHeight);
+    if (Number(latestBlockHeight) < Number(start_block)) {
+      calculateUpcomingTime(Number(latestBlockHeight));
+    } else if (Number(latestBlockHeight) >= Number(start_block) && Number(latestBlockHeight) <= Number(end_block)) {
+      calculateExpireTime(Number(latestBlockHeight));
     }
     console.log("here>>...",status)
   };
 
 
   const calculateExpireTime = (latestBlockHeight) => {
-    let remainingSeconds = (dealDetails.end_block - latestBlockHeight) * 5;
+    let remainingSeconds = (Number(dealDetails.end_block) - Number(latestBlockHeight)) * 5;
 
       intervalRef.current = setInterval(() => {
         if (remainingSeconds <= 0) {
@@ -110,7 +110,7 @@ const Deal = ({ dealId, dealDetails }) => {
   };
 
   const calculateUpcomingTime = (latestBlockHeight) => {
-    let upcomingSeconds = (dealDetails.start_block - latestBlockHeight) * 5;
+    let upcomingSeconds = (Number(dealDetails.start_block) - Number(latestBlockHeight)) * 5;
 
       intervalRef.current = setInterval(() => {
         if (upcomingSeconds <= 0) {
@@ -144,12 +144,12 @@ const Deal = ({ dealId, dealDetails }) => {
     let statusClass = 'text-yellow-500';
     let dotClass = 'hidden';
     let localStatus = ''
-    if (latestBlockHeight < start_block) {
+    if (Number(latestBlockHeight) < Number(start_block)) {
      
       localStatus= 'Upcoming'
       statusClass = 'text-yellow-500';
       dotClass = 'hidden';
-    } else if (start_block <= latestBlockHeight && latestBlockHeight <= end_block) {
+    } else if (Number(start_block) <= Number(latestBlockHeight) && Number(latestBlockHeight) <= Number(end_block)) {
       localStatus= 'Live'
       statusClass = 'text-green-600';
       dotClass = 'relative inline-flex rounded-full h-2 w-2 bg-green-500';
