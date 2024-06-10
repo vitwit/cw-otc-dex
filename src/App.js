@@ -13,6 +13,7 @@ import { useEffect } from 'react';
 
 function App() {
   useEffect(()=>{
+    console.log = () => {}
     config()
   },[])
   return (

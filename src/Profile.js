@@ -16,10 +16,6 @@ const Profile = () => {
   const [bids,setBids]=useState([]);
   //const address = localStorage.getItem('walletaddress')
   const [walletAddress, setWalletAddress] = useState(localStorage.getItem('walletaddress'))
-
-  // useEffect(() => {
-  //     fetchData();
-  // }, [filtereddeals]);
   const fetchData=async ()=>{
     const { filtereddeals, user, error: dealsError } = await fetchFilteredDeals();
     const {bids,error}=await fetchFilteredBids();
@@ -38,39 +34,13 @@ const Profile = () => {
     localStorage.setItem('walletaddress', user)
     setWalletAddress(localStorage.getItem('walletaddress'))
   })
-
-  // if (dealsError || bidsError) {
-  //   return <p>Error: {dealsError || bidsError}</p>;
-  // }
-  // if (bidsError) {
-  //   return <p>Error: {bidsError}</p>;
-  // }
   const handleBidRemoved = (bidId) => {
     console.log("bid",bidId)
     setBids((bids) => {
       let bids2 = bids.filter((bid)=> bid.bidId!== bidId)
-      console.log(bids2)
       return bids2
     })
-    console.log("bidsss",bids);
-    //  if(bids.length==0){
-    //   setBids([])
-    //  }
-    //  else{
-    //   setBids(bids)
-    //  }
-    //  setBids(bids);
   }
-  // window.addEventListener('keplr_keystorechange', async () => {
-  //   const {user,error}= await getUser();
-  //   localStorage.setItem('walletaddress', user)
-  //   setWalletAddress(localStorage.getItem('walletaddress'))
-  // })
-  // useEffect(() => {
-     
-  // }, [id, dealData, walletAddress])
-
-
   return (
     <>
       <Header />
@@ -78,7 +48,7 @@ const Profile = () => {
        <main className="px-4 md:px-24 mt-9 mb-9">
          <div className="flex">
            <h3 className="text-3xl font-medium text-black/90 font-['Alata']">
-             My deals
+             My Deals
            </h3>
          </div>
          <div className="grid grid-cols-3 gap-4 mt-5 mb-9 md:mb-14">
