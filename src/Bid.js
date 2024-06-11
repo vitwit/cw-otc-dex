@@ -61,9 +61,7 @@ const Bid = () => {
         prices.bidTokenPrice
       )
       setMarketRate(marketExchangeRate)
-      // console.log('OSMO', prices.dealTokenPrice, 'ATOM', prices.bidTokenPrice)
       const difference = calculatePercentageDifference(dealData.min_price, marketExchangeRate)
-      // console.log("difference",difference);
       setPercentageDifference(difference)
     } catch (e) {
       setError(e.message)
@@ -103,7 +101,7 @@ const Bid = () => {
     // const result = await getDeal(id)
     // setDealData(result.deal)
     if (dealData) {
-      if (+(dealData.total_bid/10**dealDecimal) >=+(dealData.min_cap)) {
+      if (+(dealData.total_bid / 10 ** dealDecimal) >= +dealData.min_cap) {
         setExpectedResult(true)
       }
       const progressbar =
@@ -117,9 +115,8 @@ const Bid = () => {
       }
     }
   }
-  
 
-  const setStatus=async ()=>{
+  const setStatus = async () => {
     setNotActive(true)
   }
   useEffect(() => {
@@ -189,11 +186,10 @@ const Bid = () => {
               expirationDate = moment().add(remainingSeconds, 'seconds')
               setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm A'))
               clearInterval(intervalRef.current)
-              
             } else {
               expirationDate = moment().add(remainingSeconds, 'seconds')
               setExpireDate(expirationDate.format('MMMM D, YYYY [at] h:mm A'))
-              
+
               intervalRef.current = setInterval(() => {
                 if (remainingSeconds <= 0) {
                   clearInterval(intervalRef.current)
@@ -223,7 +219,6 @@ const Bid = () => {
                 }
 
                 formattedTime = formattedTime.trim()
-                // setExpireTime(formattedTime);
                 setExpireTime(`closes in ${formattedTime}`)
                 remainingSeconds -= 1
               }, 1000)
@@ -237,7 +232,6 @@ const Bid = () => {
     }
 
     if (dealData) {
-      // FetchDealDetails();
       fetchLatestBlockHeight()
     }
   }, [dealData])
@@ -245,10 +239,9 @@ const Bid = () => {
   const fetchBidStore = async () => {
     try {
       const { bids: bidsResponse, error } = await getBidStore(id)
-      // console.log('len', bidsResponse.lengsth)
+
       if (bidsResponse.length > 0) {
         setBidStoreData(bidsResponse)
-        // console.log('--->', bidsResponse)
       } else {
         setBidStoreData([])
       }
@@ -261,28 +254,22 @@ const Bid = () => {
   }, [id, showBidForm])
 
   const fetchMyBids = async () => {
-    // if(walletAddress!= localStorage.getItem('walletaddress')){
     const address = localStorage.getItem('walletaddress')
-    // console.log("add",address);
-    //   setWalletAddress(address)
-    // }
     if (address) {
       try {
         const { bids: bidsResponse, error } = await getBidStore(id)
         if (dealData && bidsResponse.length > 0) {
-          // console.log('All BIDS IN MINE func', bidsResponse)
           const sortedBids = bidsResponse.sort((a, b) => {
             const priceComparison = parseInt(b[1].price) - parseInt(a[1].price)
             if (priceComparison !== 0) {
               return priceComparison
             } else {
-              // If prices are equal, sort by bid id
               return a[0] - b[0]
             }
           })
 
           let cumulativeAmount = 0
-          const dealAmount = dealData.deal_token_amount // Set your deal amount here
+          const dealAmount = dealData.deal_token_amount
 
           // Create a map to store the bid ID and a boolean value
           const bidStatusMap = new Map()
@@ -327,14 +314,7 @@ const Bid = () => {
     setShowBidForm(false)
     const result = await getDeal(id)
     setDealData(result.deal)
-    FetchDealDetails();
-    // if (dealData) {
-    //   const progressbar =
-    //     (+dealData.total_bid / +dealData.deal_token_amount) * 100 >= 100
-    //       ? 100
-    //       : (+dealData.total_bid /+dealData.deal_token_amount) * 100
-    //   setProgress(progressbar)
-    // }
+    FetchDealDetails()
   }
   const handleCancel = () => {
     // Hide bid form after canceling bid
@@ -342,8 +322,8 @@ const Bid = () => {
   }
   const handleBidRemoved = async (bidId) => {
     setMyBids((myBids) => {
-      let bids2=myBids.filter((bid) => bid.id !== bidId)
-       return bids2
+      let bids2 = myBids.filter((bid) => bid.id !== bidId)
+      return bids2
     })
     setBidStatusMap((prevMap) => {
       const newMap = new Map(prevMap)
@@ -355,20 +335,20 @@ const Bid = () => {
     const result = await getDeal(id)
     setDealData(result.deal)
     if (dealData) {
-      FetchDealDetails();
+      FetchDealDetails()
     }
   }
   const handleDealExecution = () => {
     toast.promise(executeDeal(id), {
       loading: 'Executing Deal...',
       success: (response) => {
-        setDealExecuted(true);
-        return "Deal Executed Successfully!"; // Show the amount value in success message
+        setDealExecuted(true)
+        return 'Deal Executed Successfully!'
       },
       error: (error) => <b>{JSON.stringify(error)}</b>
-    });
+    })
   }
-  
+
   return (
     <>
       <Header />
@@ -382,7 +362,6 @@ const Bid = () => {
                 className="text-2xl font-medium text-gray-800"
                 title="Selling 1,000,000 ATOMs in exchange for USDT"
               >
-                {/* Selling 1,000,000 ATOMs in exchange for USDT */}
                 {dealData && dealData.deal_title}
               </h4>
 
@@ -396,23 +375,12 @@ const Bid = () => {
                     <span className="font-medium ml-2">Live</span>
                   </div>
                 )}
-
-                {/* <div className="inline-flex items-center justify-center text-green-600 rounded text-sm mr-2.5 mb-2.5">
-                  <div className="relative flex items-center justify-center">
-                  
-                    <div className="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-green-400 opacity-75"></div>
-                    <div className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></div>
-                  </div>
-                  <span className="font-medium ml-2">Live</span>
-                </div> */}
                 <span className="border border-gray-300 rounded-lg text-sm px-3 py-0.5 mr-1.5 mb-2.5 text-neutral-700 flex items-center">
-                  {/* <i className="fa-solid fa-dollar-sign text-xs mr-1"></i>   */}
                   <img
                     src={icons[dealData && dealData.bid_token_denom]}
                     alt={dealData && dealData.bid_token_denom}
                     className="inline-block w-4 h-4 mr-1"
                   />
-                  {/* min 1,000 USDT */}
                   min {dealData && dealData.min_price} {bidDenom != null && bidDenom}
                 </span>
                 <span className="border border-gray-300 rounded-lg text-sm px-3 py-0.5 mr-1.5 mb-2.5 text-neutral-600 flex items-center">
@@ -428,13 +396,9 @@ const Bid = () => {
               <div className="w-full mt-5 flex">
                 <p className="w-1/2 md:w-1/3 font-['Raleway']  text-start">Deal Token Amount</p>
                 <div className="text-gray-600 font-medium ml-1">
-                  {/* 78%/60% */}
                   {dealData && dealData.deal_token_amount / 10 ** dealDecimal}
                 </div>
-                <div className="text-gray-600 font-medium ml-1">
-                  {/* 78%/60% */}
-                  {dealData && dealDenom}
-                </div>
+                <div className="text-gray-600 font-medium ml-1">{dealData && dealDenom}</div>
               </div>
               <div className="w-full mt-5 flex items-start">
                 <p className="w-1/2 md:w-1/3 font-['Raleway'] text-start">Expected result</p>
@@ -493,16 +457,6 @@ const Bid = () => {
             <div className="mt-5 bg-white px-5 py-3 border border-gray-200 rounded-lg h-[400px]">
               <div className="grid">
                 {bidStoreData && <BidsOverview data={bidStoreData} deal_decimal={dealDecimal} />}
-                {/* <div className="">
-                  <h4 className="text-lg">Bids overview</h4>
-
-                  <div className="mt-4 bg-emerald-50 h-44"></div>
-                </div> */}
-                {/* <div className="">
-                  <h4 className="text-lg">Bid settlement</h4>
-
-                  <div className="mt-4 bg-cyan-50 h-44"></div>
-                </div> */}
               </div>
             </div>
           </div>
@@ -513,12 +467,15 @@ const Bid = () => {
                 Dealer price: 1 {dealData && dealDenom} = {dealData && dealData.min_price}{' '}
                 {dealData && bidDenom}
               </h4>
-              {percentageDifference==null?<><p>Fetching Data..</p></>:(percentageDifference && percentageDifference > 5 ? (
+              {percentageDifference == null ? (
+                <>
+                  <p>Fetching Data..</p>
+                </>
+              ) : percentageDifference && percentageDifference > 5 ? (
                 <>
                   <p className="text-red-600">
                     {percentageDifference && Math.abs(percentageDifference).toFixed(2)}%{' '}
                     {percentageDifference > 0 ? 'higher' : 'lower'} than the market rate.
-                    {/* 20% lower than market price */}
                   </p>
                 </>
               ) : (
@@ -526,10 +483,9 @@ const Bid = () => {
                   <p className="text-gray-600">
                     {percentageDifference && Math.abs(percentageDifference).toFixed(2)}%{' '}
                     {percentageDifference > 0 ? 'higher' : 'lower'} than the market rate.
-                    {/* 20% lower than market price */}
                   </p>
                 </>
-              ))}
+              )}
 
               {loading ? (
                 <button
@@ -542,9 +498,8 @@ const Bid = () => {
                 <button className="mt-4 w-full md:w-2/3 border py-1.5 rounded-xl border border-rose-500  text-rose-600">
                   Deal Executed
                 </button>
-              ) : dealData &&
-                (latestBlockHeight &&
-                +(latestBlockHeight) >= +(dealData.end_block))||notActive? (
+              ) : (dealData && latestBlockHeight && +latestBlockHeight >= +dealData.end_block) ||
+                notActive ? (
                 <button
                   onClick={handleDealExecution}
                   className="mt-4 w-full md:w-2/3 border py-1.5 rounded-xl border border-rose-500 hover:bg-rose-500 text-rose-600 hover:text-white"
@@ -572,49 +527,6 @@ const Bid = () => {
               </h4>
 
               <div className="min-w-full text-sm text-left text-gray-800 mb-4">
-                {/* <div className="border-t border-gray-200">
-                  <div className="bg-white flex justify-between items-center px-6 py-3">
-                    <div className="w-1/3">$1000</div>
-                    <div className="w-1/3">$10.50</div>
-                    <div className="w-1/3">
-                      <button className="px-5 py-1 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-200 flex items-center">
-                        <i className="fa-solid fa-xmark mr-2"></i>
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex px-6 pb-2">
-                    <div className="text-gray-500 flex-grow">
-                      <span>
-                        <i className="fa-regular fa-clock text-xs mr-1"></i>
-                        20 mins ago
-                      </span>
-                      <span className="ml-4 text-blue-600">might not win due to high demand</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="border-t border-gray-200">
-                  <div className="bg-white flex justify-between items-center px-6 py-3">
-                    <div className="w-1/3">$1000</div>
-                    <div className="w-1/3">$10.50</div>
-                    <div className="w-1/3">
-                      <button className="px-5 py-1 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-200 flex items-center">
-                        <i className="fa-solid fa-xmark mr-2"></i>
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex px-6 pb-2">
-                    <div className="text-gray-500 flex-grow">
-                      <span>
-                        <i className="fa-regular fa-clock text-xs mr-1"></i>
-                        20 mins ago
-                      </span>
-                      <span className="ml-4 text-blue-600">might not win due to high demand</span>
-                    </div>
-                  </div>
-                </div> */}
-
                 {myBids.length === 0 ? (
                   <p className="text-gray-500 text-sm py-8 text-center">No bids placed yet.</p>
                 ) : (
@@ -672,27 +584,6 @@ const Bid = () => {
                 )}
 
                 <tbody>
-                  {/* {
-                activityLoading ? (
-                  <div class="mx-auto text-center">
-                    <b>Activity Store Loading...</b>
-                  </div>
-                ) :(
-                bidStoreData.length <= 0 ? (
-                  <div class="mx-auto text-center">
-                    <b>No bids placed yet.</b>
-                  </div>
-                ) : (
-                  // <div>Data retrieved</div>
-                  bidStoreData&&bidStoreData.map((bid) => (
-                    <ActivityItem
-                      bid={bid[1]}
-                    />
-                  ))
-                ))} */}
-                  {/* {
-                JSON.stringify(bidStoreData)
-                } */}
                   {activityLoading ? (
                     <p>Loading activities...</p>
                   ) : bidStoreData?.length > 0 ? (
@@ -709,111 +600,10 @@ const Bid = () => {
                   ) : (
                     <p className="text-gray-500 text-sm py-8 text-center">No activities yet.</p>
                   )}
-
-                  {/* <tr className="bg-white border-b hover:bg-slate-50">
-                    <td className="py-4 px-6">
-                      <span className="border border-slate-100 px-3 py-0.5 rounded-lg bg-zinc-200 text-gray-600 font-medium">
-                        Bid
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">$1000</td>
-                    <td className="py-4 px-6">$10.50</td>
-                    <td className="py-4 px-6">
-                      <a href="#" className="text-rose-600">
-                        deotcabc..xyz
-                      </a>
-                    </td>
-                    <td className="py-4 px-6">2h</td>
-                  </tr>
-                  <tr className="bg-white border-b hover:bg-slate-50">
-                    <td className="py-4 px-6">
-                      <span className="border border-slate-100 px-3 py-0.5 rounded-lg bg-zinc-200 text-gray-600 font-medium">
-                        Bid
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">$2100</td>
-                    <td className="py-4 px-6">$11.50</td>
-                    <td className="py-4 px-6">
-                      <a href="#" className="text-rose-600">
-                        deotc123..xyz
-                      </a>
-                    </td>
-                    <td className="py-4 px-6">3h</td>
-                  </tr>
-                  <tr className="bg-white border-b hover:bg-slate-50">
-                    <td className="py-4 px-6">
-                      <span className="border border-slate-100 px-3 py-0.5 rounded-lg bg-zinc-200 text-gray-600 font-medium">
-                        Remove
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">$1900</td>
-                    <td className="py-4 px-6">$11.10</td>
-                    <td className="py-4 px-6">
-                      <a href="#" className="text-rose-600">
-                        deotc123..999
-                      </a>
-                    </td>
-                    <td className="py-4 px-6">3h</td>
-                  </tr>
-                  <tr className="bg-white border-b hover:bg-slate-50">
-                    <td className="py-4 px-6">
-                      <span className="border border-slate-100 px-3 py-0.5 rounded-lg bg-zinc-200 text-gray-600 font-medium">
-                        Bid
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">$1900</td>
-                    <td className="py-4 px-6">$11.10</td>
-                    <td className="py-4 px-6">
-                      <a href="#" className="text-rose-600">
-                        deotc123..999
-                      </a>
-                    </td>
-                    <td className="py-4 px-6">3h</td>
-                  </tr>
-                  <tr className="bg-white border-b hover:bg-slate-50">
-                    <td className="py-4 px-6">
-                      <span className="border border-slate-100 px-3 py-0.5 rounded-lg bg-zinc-200 text-gray-600 font-medium">
-                        Bid
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">$2700</td>
-                    <td className="py-4 px-6">$11.00</td>
-                    <td className="py-4 px-6">
-                      <a href="#" className="text-rose-600">
-                        deotc123..456
-                      </a>
-                    </td>
-                    <td className="py-4 px-6">3h</td>
-                  </tr> */}
                 </tbody>
               </table>
             </div>
           </div>
-          {/* <Toaster
-            toastOptions={{
-              // Define default options
-              className: '',
-              duration: 5000,
-              style: {
-                background: '#239023',
-                color: '#fff'
-              },
-              // Default options for specific types
-              success: {
-                style: {
-                  background: 'green',
-                },
-              },
-              error: {
-                style: {
-                  background: 'red',
-                },
-              },
-            }}            
-            position="top-right"
-            width="550px"
-            reverseOrder={false}
-          /> */}
         </div>
         {showBidForm && (
           <BidForm

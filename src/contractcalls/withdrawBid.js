@@ -1,7 +1,6 @@
 import { getOfflineSignerAndCosmWasmClient } from '../GetClient'
 import { AppConstants } from '../config/constant'
 export const withdrawBid = async (bidId, dealId) => {
-  // const { amount, price, denom } = formData;
   try {
     const { offlineSigner, CosmWasmClient } = await getOfflineSignerAndCosmWasmClient()
     const contractAddress = AppConstants.CONTRACT_ADDRESS

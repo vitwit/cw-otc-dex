@@ -19,8 +19,6 @@ function App() {
   },[])
   return (
     <div className="App">
-      {/* <SetUpNodeLocal/> */}
-      {/* <GetBalance></GetBalance> */}
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<IndexPage />}> </Route>

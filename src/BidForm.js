@@ -153,8 +153,7 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId, bidDenom, dealDecimal
                     className="border border-gray-300 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-[200px] p-2"
                   />
                   <div className="text-start">
-                    {/* {amountError && <p className="text-red-600 text-sm">{amountError}</p>} */}
-                    {amountError && <p className="text-red-600 text-sm">{amountError}</p>}{' '}
+                   u {amountError && <p className="text-red-600 text-sm">{amountError}</p>}{' '}
                   </div>
                 </div>
               </div>
@@ -180,7 +179,6 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId, bidDenom, dealDecimal
                     className="border border-gray-300 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-[210px] p-2"
                   />
                   <div className="text-start">
-                    {/* {amountError && <p className="text-red-600 text-sm">{amountError}</p>} */}
                     {priceError && <p className="text-red-600 text-sm mt-1">{priceError}</p>}
                   </div>
                 </div>
@@ -206,7 +204,6 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId, bidDenom, dealDecimal
             </button>
             <button
               type="submit"
-              // className="cursor-not-allowed px-6 py-1.5 rounded-xl bg-green-500 hover:bg-green-600 text-white font-medium transition-colors duration-200 ease-in-out"
               className={`px-6 py-1.5 rounded-xl text-white font-medium transition-colors duration-200 ease-in-out ${
                 loading || !isAmountValid || !isPriceValid
                   ? 'bg-green-300 cursor-not-allowed'

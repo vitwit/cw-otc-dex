@@ -2,7 +2,6 @@ import { getOfflineSignerAndCosmWasmClient } from '../GetClient'
 import { AppConstants } from '../config/constant'
 import { fetchTokenDenom } from '../utils/getDecimalByDenom'
 export const placeBid = async (amount, price, denom, dealDenom, dealId) => {
-  // const { amount, price, denom } = formData;
   try {
     const { offlineSigner, CosmWasmClient } = await getOfflineSignerAndCosmWasmClient()
     const contractAddress = AppConstants.CONTRACT_ADDRESS
