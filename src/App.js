@@ -13,14 +13,12 @@ import { useEffect } from 'react';
 
 function App() {
   useEffect(()=>{
-    
+    console.log = () => {}
     config()
     
   },[])
   return (
     <div className="App">
-      {/* <SetUpNodeLocal/> */}
-      {/* <GetBalance></GetBalance> */}
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<IndexPage />}> </Route>

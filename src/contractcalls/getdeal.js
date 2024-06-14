@@ -16,7 +16,6 @@ export const getDeal=async (id)=>{
         return response
     }
     catch(error){   
-        console.log(error)
         return error.message;
     }
 }

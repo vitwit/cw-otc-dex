@@ -3,7 +3,7 @@ import toast, { Toaster } from 'react-hot-toast'
 import { placeBid } from './contractcalls/placeBid'
 import { getUserBalancebyDenom } from './utils/fetchKeplrBalance'
 import { fetchTokenDetails } from './utils/getDenom'
-const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom,dealDecimal}) => {
+const BidForm = ({ onCancel, onPlaceBid, dealData, dealId, bidDenom, dealDecimal }) => {
   const formRef = useRef(null)
   const [loading, setLoading] = useState(false)
   const [totalAmount, setTotalAmount] = useState(null)
@@ -13,20 +13,18 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom,dealDecimal}
   const [isAmountValid, setIsAmountValid] = useState(false)
   const [isPriceValid, setIsPriceValid] = useState(false)
   const [price, setPrice] = useState('')
-  const [availableBalance,SetAvailable]=useState('');
+  const [availableBalance, SetAvailable] = useState('')
 
-  const fetchBalance=async ()=>{
-      const { denom: bid_denom, decimal: bid_decimal } = await fetchTokenDetails(bidDenom)
-      let address=localStorage.getItem('walletaddress');
-      if(address){
-        console.log("erro",address);
-        const balance=await getUserBalancebyDenom(address,bid_denom,bid_decimal);
-        console.log("erross");
-        SetAvailable(balance.balance)
-      }
-      else{
-        SetAvailable(0)
-      }
+  const fetchBalance = async () => {
+    const { denom: bid_denom, decimal: bid_decimal } = await fetchTokenDetails(bidDenom)
+    let address = localStorage.getItem('walletaddress')
+    if (address) {
+      const balance = await getUserBalancebyDenom(address, bid_denom, bid_decimal)
+
+      SetAvailable(balance.balance)
+    } else {
+      SetAvailable(0)
+    }
   }
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -35,7 +33,7 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom,dealDecimal}
     if (!localStorage.getItem('walletaddress')) {
       return toast.error('Connect Your Wallet to Place Bid')
     }
-    if (localStorage.getItem('walletaddress')===dealData.deal_creator) {
+    if (localStorage.getItem('walletaddress') === dealData.deal_creator) {
       return toast.error('Deal Creator cannot place the bid')
     }
     // Validate form fields
@@ -56,18 +54,19 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom,dealDecimal}
     setLoading(true)
     try {
       await toast.promise(
-        placeBid(amount, price, dealData.bid_token_denom,dealData.deal_token_denom,dealId), {
-        loading: <b>Please Wait..Creating Bid...</b>,
-        success: () => <b>Bid Placed Successfully</b>,
-        error: (error) => <b>{JSON.stringify(error)}</b>
-      })
+        placeBid(amount, price, dealData.bid_token_denom, dealData.deal_token_denom, dealId),
+        {
+          loading: <b>Please Wait..Creating Bid...</b>,
+          success: () => <b>Bid Placed Successfully</b>,
+          error: (error) => <b>{JSON.stringify(error)}</b>
+        }
+      )
       await onPlaceBid()
       formRef.current.reset()
       setAmount('')
       setPrice('')
       setTotalAmount(null)
     } catch (error) {
-      console.error(error)
     } finally {
       setLoading(false)
     }
@@ -81,11 +80,10 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom,dealDecimal}
       setPrice('')
       setPriceError(null)
     } else {
-      if (isNaN(value)){
+      if (isNaN(value)) {
         setTotalAmount(null)
         setPriceError('price should be a number')
-      }
-      else if (parseFloat(value) < dealData.min_price) {
+      } else if (parseFloat(value) < dealData.min_price) {
         setTotalAmount(null)
         setPriceError(`Price can't be less than ${dealData.min_price}`)
       } else {
@@ -108,13 +106,16 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom,dealDecimal}
       setAmount('')
       setAmountError(null)
     } else {
-      if (isNaN(value)){
+      if (isNaN(value)) {
         setTotalAmount(null)
         setAmountError('Quantity should be a number')
-      }
-      else if (Number(value) > Number(dealData.deal_token_amount/(10**dealDecimal))) {
+      } else if (Number(value) > Number(dealData.deal_token_amount / 10 ** dealDecimal)) {
         setTotalAmount(null)
-        setAmountError(`Quantity should be less than or equal to ${dealData.deal_token_amount/(10**dealDecimal)}`)
+        setAmountError(
+          `Quantity should be less than or equal to ${
+            dealData.deal_token_amount / 10 ** dealDecimal
+          }`
+        )
       } else {
         setIsAmountValid(true)
         setAmountError(null)
@@ -152,8 +153,7 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom,dealDecimal}
                     className="border border-gray-300 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-[200px] p-2"
                   />
                   <div className="text-start">
-                    {/* {amountError && <p className="text-red-600 text-sm">{amountError}</p>} */}
-                    {amountError && <p className="text-red-600 text-sm">{amountError}</p>}{' '}
+                   u {amountError && <p className="text-red-600 text-sm">{amountError}</p>}{' '}
                   </div>
                 </div>
               </div>
@@ -179,7 +179,6 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom,dealDecimal}
                     className="border border-gray-300 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-[210px] p-2"
                   />
                   <div className="text-start">
-                    {/* {amountError && <p className="text-red-600 text-sm">{amountError}</p>} */}
                     {priceError && <p className="text-red-600 text-sm mt-1">{priceError}</p>}
                   </div>
                 </div>
@@ -189,10 +188,9 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom,dealDecimal}
           <div className="flex flex-row space-x-2">
             {totalAmount && totalAmount > 0 && (
               <div class="mx-auto">
-                <p>Available Balance: {availableBalance+ '  ' + bidDenom}</p>
+                <p>Available Balance: {availableBalance + '  ' + bidDenom}</p>
                 <b>Bid Size : {totalAmount + '  ' + bidDenom}</b>
               </div>
-
             )}
           </div>
           <div className="flex justify-end">
@@ -206,7 +204,6 @@ const BidForm = ({ onCancel, onPlaceBid, dealData, dealId ,bidDenom,dealDecimal}
             </button>
             <button
               type="submit"
-              // className="cursor-not-allowed px-6 py-1.5 rounded-xl bg-green-500 hover:bg-green-600 text-white font-medium transition-colors duration-200 ease-in-out"
               className={`px-6 py-1.5 rounded-xl text-white font-medium transition-colors duration-200 ease-in-out ${
                 loading || !isAmountValid || !isPriceValid
                   ? 'bg-green-300 cursor-not-allowed'
