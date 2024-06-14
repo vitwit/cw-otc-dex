@@ -26,13 +26,16 @@ const ActivityItem = ({ bid, dealDenom, deal_Decimal }) => {
             Bid
           </span>
         </td>
-        <td className="py-4 px-6">
-          <div className="flex ">
-            <img src={icons[dealDenom]} alt={dealDenom} className="inline-block w-4 h-4 mr-1" />
+        <td className="py-10 px-6">
+          <div className="flex items-center ">
+            <img src={icons[dealDenom]} alt={dealDenom} className="inline-block w-4 h-4 mr-1  justify-center" />
+            <p className=' flex justify-center'>
+
             {quantity}
+            </p>
           </div>
         </td>
-        <td className="py-10 px-6 flex items-center justify-center">
+        <td className="py-10 px-6">
           <img src={icons[bid.denom]} alt={bid.denom} className="inline-block w-4 h-4 mr-1" />
           {price}
         </td>
