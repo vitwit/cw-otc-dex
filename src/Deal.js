@@ -45,6 +45,7 @@ const Deal = ({ dealId, dealDetails }) => {
       const intervalId = setInterval(fetchLatestBlockHeight, 5000); 
 
       return () => clearInterval(intervalId); 
+      console.log("deal details;",dealDetails);
     }
   }, [dealDetails]);
 

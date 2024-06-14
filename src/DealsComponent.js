@@ -30,9 +30,9 @@ const DealsComponent = () => {
           console.log("deals are :",deal)
           console.log("start block is:",startBlock);
           console.log("end block is:",endBlock);
-          if (latestBlockHeight < startBlock) {
+          if (Number(latestBlockHeight) < Number(startBlock)) {
             upcoming.push(deal);
-          } else if (startBlock <= latestBlockHeight && latestBlockHeight <= endBlock) {
+          } else if (Number(startBlock) <= Number(latestBlockHeight) && Number(latestBlockHeight) <= Number(endBlock)) {
             live.push(deal);
           } else {
             completed.push(deal);
