@@ -454,7 +454,7 @@ const Bid = () => {
               </div>
             </div>
 
-            <div className="mt-5 bg-white px-5 py-3 border border-gray-200 rounded-lg h-[1000px]">
+            <div className="mt-5 bg-white px-5 py-3 border border-gray-200 rounded-lg h-[450px]">
               <div className="grid">
                 {bidStoreData && <BidsOverview data={bidStoreData} deal_decimal={dealDecimal} />}
               </div>
