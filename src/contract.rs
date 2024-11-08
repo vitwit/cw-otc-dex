@@ -1,16 +1,25 @@
-#[cfg(not(feature = "library"))]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response,
+    StdResult, Uint128, Order, entry_point, CosmosMsg, Storage,
+};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, GetCountResponse, InstantiateMsg, QueryMsg};
-use crate::state::{State, STATE};
+use crate::msg::{
+    ExecuteMsg, InstantiateMsg, QueryMsg, ConfigResponse,
+    DealResponse, BidsResponse,
+};
+use crate::state::{Config, Deal, Bid, CONFIG, DEAL_COUNTER, DEALS, BIDS};
+use crate::helpers::{
+    create_token_transfer_msg, create_payment_msg, get_sorted_bids,
+    validate_deal_times, calculate_platform_fee,
+};
 
-// version info for migration info
-const CONTRACT_NAME: &str = "crates.io:cw-otc-dex";
+/// Contract name and version info for migration
+const CONTRACT_NAME: &str = "crates.io:cosmos-otc-platform";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+/// Initializes the contract with the specified configuration
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -18,139 +27,510 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    let state = State {
-        count: msg.count,
-        owner: info.sender.clone(),
-    };
+    // Validate platform fee percentage (must be between 0 and 10000)
+    if msg.platform_fee_percentage > 10000 {
+        return Err(ContractError::InvalidTimeParameters {
+            reason: "Platform fee percentage must not exceed 100%".to_string(),
+        });
+    }
+
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    STATE.save(deps.storage, &state)?;
+
+    let config = Config {
+        platform_fee_percentage: msg.platform_fee_percentage,
+    };
+    
+    CONFIG.save(deps.storage, &config)?;
+    DEAL_COUNTER.save(deps.storage, &0u64)?;
 
     Ok(Response::new()
         .add_attribute("method", "instantiate")
-        .add_attribute("owner", info.sender)
-        .add_attribute("count", msg.count.to_string()))
+        .add_attribute("owner", info.sender))
 }
 
+/// Handles all execute messages
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Increment {} => execute::increment(deps),
-        ExecuteMsg::Reset { count } => execute::reset(deps, info, count),
+        ExecuteMsg::CreateDeal {
+            sell_token,
+            total_amount,
+            min_price,
+            discount_percentage,
+            min_cap,
+            bid_start_time,
+            bid_end_time,
+            conclude_time,
+        } => execute_create_deal(
+            deps,
+            env,
+            info,
+            sell_token,
+            total_amount,
+            min_price,
+            discount_percentage,
+            min_cap,
+            bid_start_time,
+            bid_end_time,
+            conclude_time,
+        ),
+        ExecuteMsg::PlaceBid {
+            deal_id,
+            amount,
+            discount_percentage,
+            max_price,
+        } => execute_place_bid(deps, env, info, deal_id, amount, discount_percentage, max_price),
+        ExecuteMsg::UpdateBid {
+            deal_id,
+            new_amount,
+            new_discount_percentage,
+            new_max_price,
+        } => execute_update_bid(deps, env, info, deal_id, new_amount, new_discount_percentage, new_max_price),
+        ExecuteMsg::WithdrawBid { deal_id } => execute_withdraw_bid(deps, env, info, deal_id),
+        ExecuteMsg::ConcludeDeal { deal_id } => execute_conclude_deal(deps, env, info, deal_id),
     }
 }
 
-pub mod execute {
-    use super::*;
+/// Creates a new OTC deal
+pub fn execute_create_deal(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    sell_token: String,
+    total_amount: Uint128,
+    min_price: Uint128,
+    discount_percentage: u64,
+    min_cap: Uint128,
+    bid_start_time: u64,
+    bid_end_time: u64,
+    conclude_time: u64,
+) -> Result<Response, ContractError> {
+    // Validate time parameters
+    validate_deal_times(
+        bid_start_time,
+        bid_end_time,
+        conclude_time,
+        env.block.time.seconds(),
+    )?;
 
-    pub fn increment(deps: DepsMut) -> Result<Response, ContractError> {
-        STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
-            state.count += 1;
-            Ok(state)
-        })?;
-
-        Ok(Response::new().add_attribute("action", "increment"))
+    // Validate discount percentage
+    if discount_percentage > 10000 {
+        return Err(ContractError::InvalidTimeParameters {
+            reason: "Discount percentage must not exceed 100%".to_string(),
+        });
     }
 
-    pub fn reset(deps: DepsMut, info: MessageInfo, count: i32) -> Result<Response, ContractError> {
-        STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
-            if info.sender != state.owner {
-                return Err(ContractError::Unauthorized {});
+    // Calculate and validate platform fee
+    let config = CONFIG.load(deps.storage)?;
+    let platform_fee = calculate_platform_fee(total_amount, config.platform_fee_percentage)?;
+    
+    // Ensure seller has sent enough platform fee
+    let provided_fee = info
+        .funds
+        .iter()
+        .find(|c| c.denom == "uusd") // Replace with your desired denomination
+        .map(|c| c.amount)
+        .unwrap_or_default();
+
+    if provided_fee < platform_fee {
+        return Err(ContractError::InsufficientPlatformFee {
+            required: platform_fee.u128(),
+            provided: provided_fee.u128(),
+        });
+    }
+
+    // Create and save new deal
+    let deal_id = DEAL_COUNTER.load(deps.storage)? + 1;
+    DEAL_COUNTER.save(deps.storage, &deal_id)?;
+
+    let deal = Deal {
+        seller: info.sender.to_string(),
+        sell_token,
+        total_amount,
+        min_price,
+        discount_percentage,
+        min_cap,
+        bid_start_time,
+        bid_end_time,
+        conclude_time,
+        is_concluded: false,
+        total_bids_amount: Uint128::zero(),
+    };
+
+    DEALS.save(deps.storage, deal_id, &deal)?;
+
+    Ok(Response::new()
+        .add_attribute("method", "create_deal")
+        .add_attribute("deal_id", deal_id.to_string())
+        .add_attribute("seller", info.sender))
+}
+
+/// Places a new bid on an existing deal
+pub fn execute_place_bid(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    deal_id: u64,
+    amount: Uint128,
+    discount_percentage: u64,
+    max_price: Option<Uint128>,
+) -> Result<Response, ContractError> {
+    let deal = DEALS.load(deps.storage, deal_id)?;
+    
+    // Validate bid timing
+    let current_time = env.block.time.seconds();
+    if current_time < deal.bid_start_time {
+        return Err(ContractError::BiddingNotStarted {});
+    }
+    if current_time >= deal.bid_end_time {
+        return Err(ContractError::BiddingEnded {});
+    }
+
+    // Validate bid amount
+    if amount.is_zero() {
+        return Err(ContractError::InvalidBidAmount {
+            reason: "Bid amount must be greater than zero".to_string(),
+        });
+    }
+
+    // Validate discount percentage
+    if discount_percentage > 10000 {
+        return Err(ContractError::InvalidBidAmount {
+            reason: "Discount percentage must not exceed 100%".to_string(),
+        });
+    }
+
+    let bid = Bid {
+        bidder: info.sender.to_string(),
+        amount,
+        discount_percentage,
+        max_price,
+    };
+
+    BIDS.save(deps.storage, (deal_id, &info.sender), &bid)?;
+    
+    // Update total bids amount
+    let new_total = deal.total_bids_amount + amount;
+    DEALS.update(deps.storage, deal_id, |deal_opt| -> StdResult<_> {
+        let mut deal = deal_opt.unwrap();
+        deal.total_bids_amount = new_total;
+        Ok(deal)
+    })?;
+
+    Ok(Response::new()
+        .add_attribute("method", "place_bid")
+        .add_attribute("deal_id", deal_id.to_string())
+        .add_attribute("bidder", info.sender)
+        .add_attribute("amount", amount))
+}
+
+/// Updates an existing bid
+pub fn execute_update_bid(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    deal_id: u64,
+    new_amount: Uint128,
+    new_discount_percentage: u64,
+    new_max_price: Option<Uint128>,
+) -> Result<Response, ContractError> {
+    let deal = DEALS.load(deps.storage, deal_id)?;
+    
+    // Validate timing
+    if env.block.time.seconds() >= deal.bid_end_time {
+        return Err(ContractError::BiddingEnded {});
+    }
+
+    // Load existing bid
+    let old_bid = BIDS.load(deps.storage, (deal_id, &info.sender))?;
+    
+    // Update total bids amount
+    let amount_diff = new_amount.checked_sub(old_bid.amount)?;
+    DEALS.update(deps.storage, deal_id, |deal_opt| -> StdResult<_> {
+        let mut deal = deal_opt.unwrap();
+        deal.total_bids_amount = deal.total_bids_amount.checked_add(amount_diff)?;
+        Ok(deal)
+    })?;
+
+    // Save updated bid
+    let new_bid = Bid {
+        bidder: info.sender.to_string(),
+        amount: new_amount,
+        discount_percentage: new_discount_percentage,
+        max_price: new_max_price,
+    };
+    BIDS.save(deps.storage, (deal_id, &info.sender), &new_bid)?;
+
+    Ok(Response::new()
+        .add_attribute("method", "update_bid")
+        .add_attribute("deal_id", deal_id.to_string())
+        .add_attribute("bidder", info.sender))
+}
+
+/// Withdraws an existing bid
+pub fn execute_withdraw_bid(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    deal_id: u64,
+) -> Result<Response, ContractError> {
+    let deal = DEALS.load(deps.storage, deal_id)?;
+    
+    // Validate timing
+    if env.block.time.seconds() >= deal.bid_end_time {
+        return Err(ContractError::BiddingEnded {});
+    }
+
+    // Load and remove bid
+    let bid = BIDS.load(deps.storage, (deal_id, &info.sender))?;
+    BIDS.remove(deps.storage, (deal_id, &info.sender));
+
+    // Update total bids amount
+    DEALS.update(deps.storage, deal_id, |deal_opt| -> StdResult<_> {
+        let mut deal = deal_opt.unwrap();
+        deal.total_bids_amount = deal.total_bids_amount.checked_sub(bid.amount)?;
+        Ok(deal)
+    })?;
+
+    Ok(Response::new()
+        .add_attribute("method", "withdraw_bid")
+        .add_attribute("deal_id", deal_id.to_string())
+        .add_attribute("bidder", info.sender))
+}
+
+/// Concludes an OTC deal by processing all bids and distributing tokens
+/// 
+/// # Deal Conclusion Process
+/// 1. Validates deal timing and status
+/// 2. Checks if minimum cap is met
+/// 3. If min cap not met: refunds all bidders
+/// 4. If min cap met:
+///    - Sorts bids by discount (lowest first)
+///    - Processes bids until all tokens are allocated
+///    - Transfers tokens to successful bidders
+///    - Transfers payments to seller
+///    - Refunds unsuccessful bidders
+/// 
+/// # Arguments
+/// * `deps` - Mutable dependencies for storage access
+/// * `env` - Environment variables, primarily used for time validation
+/// * `_info` - Message information (unused but kept for consistency)
+/// * `deal_id` - Identifier of the deal to conclude
+/// 
+/// # Returns
+/// * `Response` - Success response with transfer messages and events
+/// * `ContractError` - Various error conditions that might occur
+pub fn execute_conclude_deal(
+    deps: DepsMut,
+    env: Env,
+    _info: MessageInfo,
+    deal_id: u64,
+) -> Result<Response, ContractError> {
+    // Load deal data
+    let mut deal = DEALS.load(deps.storage, deal_id)?;
+    
+    // Validation: Check timing and conclusion status
+    if env.block.time.seconds() < deal.conclude_time {
+        return Err(ContractError::ConclusionTimeNotReached {});
+    }
+    if deal.is_concluded {
+        return Err(ContractError::DealAlreadyConcluded {});
+    }
+
+    // Case 1: Minimum cap not met - refund all bidders
+    if deal.total_bids_amount < deal.min_cap {
+        let refund_messages = process_failed_deal(deps.storage, deal_id)?;
+        
+        // Mark deal as concluded
+        deal.is_concluded = true;
+        DEALS.save(deps.storage, deal_id, &deal)?;
+
+        return Ok(Response::new()
+            .add_messages(refund_messages)
+            .add_attribute("method", "conclude_deal_refund")
+            .add_attribute("deal_id", deal_id.to_string())
+            .add_attribute("reason", "min_cap_not_met")
+            .add_attribute("total_refunded", deal.total_bids_amount));
+    }
+
+    // Case 2: Process successful deal
+    let (messages, stats) = process_successful_deal(
+        deps.storage,
+        &deal,
+        deal_id,
+    )?;
+
+    // Mark deal as concluded
+    deal.is_concluded = true;
+    DEALS.save(deps.storage, deal_id, &deal)?;
+
+    Ok(Response::new()
+        .add_messages(messages)
+        .add_attribute("method", "conclude_deal")
+        .add_attribute("deal_id", deal_id.to_string())
+        .add_attribute("tokens_sold", stats.tokens_sold)
+        .add_attribute("total_payment", stats.total_payment)
+        .add_attribute("successful_bids", stats.successful_bids.to_string())
+        .add_attribute("refunded_bids", stats.refunded_bids.to_string()))
+}
+
+/// Helper struct to track deal conclusion statistics
+struct DealStats {
+    tokens_sold: Uint128,
+    total_payment: Uint128,
+    successful_bids: u32,
+    refunded_bids: u32,
+}
+
+/// Processes a failed deal by refunding all bidders
+fn process_failed_deal(
+    storage: &dyn Storage,
+    deal_id: u64,
+) -> Result<Vec<CosmosMsg>, ContractError> {
+    let mut messages: Vec<CosmosMsg> = vec![];
+    let bids = get_sorted_bids(storage, deal_id)?;
+
+    for (bidder, bid) in bids {
+        messages.push(create_payment_msg(
+            bidder,
+            bid.amount,
+            "uusd", // Replace with actual denom
+        ));
+    }
+
+    Ok(messages)
+}
+
+/// Processes a successful deal by allocating tokens and handling payments
+fn process_successful_deal(
+    storage: &dyn Storage,
+    deal: &Deal,
+    deal_id: u64,
+) -> Result<(Vec<CosmosMsg>, DealStats), ContractError> {
+    let mut messages: Vec<CosmosMsg> = vec![];
+    let mut stats = DealStats {
+        tokens_sold: Uint128::zero(),
+        total_payment: Uint128::zero(),
+        successful_bids: 0,
+        refunded_bids: 0,
+    };
+
+    let mut remaining_tokens = deal.total_amount;
+    let bids = get_sorted_bids(storage, deal_id)?;
+
+    // Process bids from lowest to highest discount
+    for (bidder, bid) in bids {
+        if remaining_tokens.is_zero() {
+            // Refund remaining bids
+            messages.push(create_payment_msg(
+                bidder,
+                bid.amount,
+                "uusd",
+            ));
+            stats.refunded_bids += 1;
+            continue;
+        }
+
+        // Calculate token allocation
+        let tokens_to_receive = std::cmp::min(bid.amount, remaining_tokens);
+        
+        // Calculate final price with discount
+        let base_price = tokens_to_receive.multiply_ratio(deal.min_price, Uint128::new(1u128));
+        let discount = base_price.multiply_ratio(bid.discount_percentage, 100u128);
+        let final_price = base_price.checked_sub(discount)?;
+
+        // Check if price meets buyer's max price constraint
+        if let Some(max_price) = bid.max_price {
+            if final_price > max_price {
+                messages.push(create_payment_msg(
+                    bidder,
+                    bid.amount,
+                    "uusd",
+                ));
+                stats.refunded_bids += 1;
+                continue;
             }
-            state.count = count;
-            Ok(state)
-        })?;
-        Ok(Response::new().add_attribute("action", "reset"))
-    }
-}
+        }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
-    match msg {
-        QueryMsg::GetCount {} => to_json_binary(&query::count(deps)?),
-    }
-}
+        // Process successful bid
+        
+        // 1. Transfer tokens to buyer
+        messages.push(create_token_transfer_msg(
+            deal.sell_token.clone(),
+            bidder.clone(),
+            tokens_to_receive,
+        )?);
 
-pub mod query {
-    use super::*;
+        // 2. Transfer payment to seller
+        messages.push(create_payment_msg(
+            deal.seller.clone(),
+            final_price,
+            "uusd",
+        ));
 
-    pub fn count(deps: Deps) -> StdResult<GetCountResponse> {
-        let state = STATE.load(deps.storage)?;
-        Ok(GetCountResponse { count: state.count })
+        // Update running totals
+        remaining_tokens = remaining_tokens.checked_sub(tokens_to_receive)?;
+        stats.tokens_sold += tokens_to_receive;
+        stats.total_payment += final_price;
+        stats.successful_bids += 1;
     }
+
+    // Validate all tokens are accounted for
+    if stats.tokens_sold + remaining_tokens != deal.total_amount {
+        return Err(ContractError::InvalidBidAmount { 
+            reason: "Token allocation mismatch".to_string() 
+        });
+    }
+
+    Ok((messages, stats))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_json};
-
+    
     #[test]
-    fn proper_initialization() {
+    fn test_conclude_deal_min_cap_not_met() {
         let mut deps = mock_dependencies();
+        let env = mock_env();
+        let info = mock_info("anyone", &[]);
 
-        let msg = InstantiateMsg { count: 17 };
-        let info = mock_info("creator", &coins(1000, "earth"));
+        // Setup test deal
+        let deal = Deal {
+            seller: "seller".to_string(),
+            sell_token: "token".to_string(),
+            total_amount: Uint128::new(1000),
+            min_price: Uint128::new(10),
+            discount_percentage: 10,
+            min_cap: Uint128::new(5000),
+            bid_start_time: env.block.time.seconds() - 1000,
+            bid_end_time: env.block.time.seconds() - 500,
+            conclude_time: env.block.time.seconds() - 100,
+            is_concluded: false,
+            total_bids_amount: Uint128::new(1000), // Less than min_cap
+        };
+        DEALS.save(deps.as_mut().storage, 1, &deal).unwrap();
 
-        // we can just call .unwrap() to assert this was a success
-        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-        assert_eq!(0, res.messages.len());
+        // Add test bid
+        let bid = Bid {
+            bidder: "bidder".to_string(),
+            amount: Uint128::new(1000),
+            discount_percentage: 5,
+            max_price: None,
+        };
+        BIDS.save(deps.as_mut().storage, (1, &Addr::unchecked("bidder")), &bid).unwrap();
 
-        // it worked, let's query the state
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCount {}).unwrap();
-        let value: GetCountResponse = from_json(&res).unwrap();
-        assert_eq!(17, value.count);
-    }
+        // Execute conclude
+        let result = execute_conclude_deal(deps.as_mut(), env, info, 1).unwrap();
 
-    #[test]
-    fn increment() {
-        let mut deps = mock_dependencies();
-
-        let msg = InstantiateMsg { count: 17 };
-        let info = mock_info("creator", &coins(2, "token"));
-        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // beneficiary can release it
-        let info = mock_info("anyone", &coins(2, "token"));
-        let msg = ExecuteMsg::Increment {};
-        let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // should increase counter by 1
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCount {}).unwrap();
-        let value: GetCountResponse = from_json(&res).unwrap();
-        assert_eq!(18, value.count);
-    }
-
-    #[test]
-    fn reset() {
-        let mut deps = mock_dependencies();
-
-        let msg = InstantiateMsg { count: 17 };
-        let info = mock_info("creator", &coins(2, "token"));
-        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // beneficiary can release it
-        let unauth_info = mock_info("anyone", &coins(2, "token"));
-        let msg = ExecuteMsg::Reset { count: 5 };
-        let res = execute(deps.as_mut(), mock_env(), unauth_info, msg);
-        match res {
-            Err(ContractError::Unauthorized {}) => {}
-            _ => panic!("Must return unauthorized error"),
-        }
-
-        // only the original creator can reset the counter
-        let auth_info = mock_info("creator", &coins(2, "token"));
-        let msg = ExecuteMsg::Reset { count: 5 };
-        let _res = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
-
-        // should now be 5
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCount {}).unwrap();
-        let value: GetCountResponse = from_json(&res).unwrap();
-        assert_eq!(5, value.count);
+        // Verify refund
+        assert!(result.messages.len() == 1); // One refund message
+        assert!(result.attributes.contains(&attr("reason", "min_cap_not_met")));
     }
 }
