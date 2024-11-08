@@ -1,6 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use cosmwasm_std::Uint128;
+use cosmwasm_schema::{cw_serde, QueryResponses};
 use crate::state::{Config, Deal, Bid};
 
 /// Message for contract instantiation
@@ -68,14 +69,17 @@ pub enum ExecuteMsg {
 }
 
 /// Messages for querying contract state
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, QueryResponses)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     /// Get details of a specific deal
+    #[returns(DealResponse)]
     GetDeal { deal_id: u64 },
     /// Get all bids for a specific deal
+    #[returns(BidsResponse)]
     GetBids { deal_id: u64 },
     /// Get contract configuration
+    #[returns(ConfigResponse)]
     GetConfig {},
 }
 

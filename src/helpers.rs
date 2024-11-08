@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    Addr, Coin, CosmosMsg, BankMsg, Uint128, WasmMsg,
+    Coin, CosmosMsg, BankMsg, Uint128, WasmMsg,
     to_binary, StdResult, Order, Storage,
 };
 use cw20::Cw20ExecuteMsg;
@@ -86,5 +86,5 @@ pub fn calculate_platform_fee(
     amount: Uint128,
     fee_percentage: u64,
 ) -> StdResult<Uint128> {
-    amount.multiply_ratio(fee_percentage, 10000u128)
+    Ok(amount.multiply_ratio(fee_percentage, 10000u128))
 }

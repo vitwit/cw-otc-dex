@@ -1,13 +1,12 @@
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response,
-    StdResult, Uint128, Order, entry_point, CosmosMsg, Storage,
+    DepsMut, Env, MessageInfo, Response,
+    StdResult, Uint128, entry_point, CosmosMsg, Storage,
 };
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{
-    ExecuteMsg, InstantiateMsg, QueryMsg, ConfigResponse,
-    DealResponse, BidsResponse,
+    ExecuteMsg, InstantiateMsg,
 };
 use crate::state::{Config, Deal, Bid, CONFIG, DEAL_COUNTER, DEALS, BIDS};
 use crate::helpers::{
