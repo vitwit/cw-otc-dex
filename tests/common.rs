@@ -2,12 +2,12 @@
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{Env, Timestamp, coins, Addr, Uint128, DepsMut};
+    use cosmwasm_std::{Env, Timestamp, coins, Addr, Uint128, DepsMut, BankMsg, CosmosMsg, SubMsg};
 
     use cw_otc_dex::msg::{ExecuteMsg, InstantiateMsg};
     use cw_otc_dex::state::{BIDS, CONFIG, DEAL_COUNTER, DEALS, Bid, Config, Deal};
     use cw_otc_dex::error::ContractError;
-    use cw_otc_dex::contract::{execute, instantiate};
+    use cw_otc_dex::contract::{execute, instantiate, execute_conclude_deal};
     
     const PLATFORM_FEE_PERCENTAGE: u64 = 100; // 1%
     const MOCK_SELL_TOKEN: &str = "token";
@@ -229,6 +229,106 @@ mod tests {
         assert!(res.messages.len() > 0);
         assert!(res.attributes.iter().any(|attr| attr.key == "tokens_sold"));
         assert!(res.attributes.iter().any(|attr| attr.key == "total_payment"));
+    }
+
+    #[test]
+    fn test_conclude_deal_min_cap_not_met() {
+        let mut deps = mock_dependencies();
+        setup_contract(deps.as_mut());
+        
+        // Setup: Create a deal
+        let start_time = 1000u64;
+        let env = mock_env_at_time(start_time);
+        
+        let total_amount = Uint128::new(1000000u128);
+        let min_cap = Uint128::new(500000u128);
+        let platform_fee = total_amount.multiply_ratio(PLATFORM_FEE_PERCENTAGE as u128, 10000u128);
+        let create_msg = create_test_deal_msg(start_time);
+        
+        let info = mock_info("seller", &coins(platform_fee.u128(), MOCK_PAYMENT_DENOM));
+        execute(deps.as_mut(), env.clone(), info, create_msg).unwrap();
+
+        // Add multiple bids that sum up to less than min_cap
+        let bid_env = mock_env_at_time(start_time + 1500); // During bidding period
+
+        // First bid
+        let bid_msg1 = ExecuteMsg::PlaceBid {
+            deal_id: 1,
+            amount: Uint128::new(200000u128),
+            discount_percentage: 500,
+            max_price: None,
+        };
+        let info = mock_info("bidder1", &[]);
+        execute(deps.as_mut(), bid_env.clone(), info, bid_msg1).unwrap();
+
+        // Second bid
+        let bid_msg2 = ExecuteMsg::PlaceBid {
+            deal_id: 1,
+            amount: Uint128::new(150000u128),
+            discount_percentage: 600,
+            max_price: None,
+        };
+        let info = mock_info("bidder2", &[]);
+        execute(deps.as_mut(), bid_env.clone(), info, bid_msg2).unwrap();
+
+        // Verify total bids amount is less than min_cap
+        let deal = DEALS.load(deps.as_ref().storage, 1).unwrap();
+        assert!(deal.total_bids_amount < min_cap);
+        assert_eq!(deal.total_bids_amount, Uint128::new(350000u128));
+
+        // Move to conclusion time and conclude the deal
+        let conclude_time = start_time + 3500;
+        let conclude_msg = ExecuteMsg::ConcludeDeal { deal_id: 1 };
+        let info = mock_info("anyone", &[]);
+        let res = execute(
+            deps.as_mut(), 
+            mock_env_at_time(conclude_time), 
+            info, 
+            conclude_msg
+        ).unwrap();
+
+        // Verify response
+        assert!(res.messages.len() == 2); // Should have refund messages for both bidders
+        
+        // Check refund messages
+        let expected_refunds = vec![
+            SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
+                to_address: "bidder1".to_string(),
+                amount: coins(200000u128, MOCK_PAYMENT_DENOM),
+            })),
+            SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
+                to_address: "bidder2".to_string(),
+                amount: coins(150000u128, MOCK_PAYMENT_DENOM),
+            })),
+        ];
+
+        for expected_msg in expected_refunds {
+            assert!(res.messages.contains(&expected_msg));
+        }
+
+        // Verify attributes
+        assert!(res.attributes.iter().any(|attr| attr.key == "method" && attr.value == "conclude_deal_refund"));
+        assert!(res.attributes.iter().any(|attr| attr.key == "reason" && attr.value == "min_cap_not_met"));
+        assert!(res.attributes.iter().any(|attr| attr.key == "total_refunded" && attr.value == "350000"));
+
+        // Verify deal is marked as concluded
+        let deal = DEALS.load(deps.as_ref().storage, 1).unwrap();
+        assert!(deal.is_concluded);
+
+        // Try to conclude again - should fail
+        let conclude_msg = ExecuteMsg::ConcludeDeal { deal_id: 1 };
+        let info = mock_info("anyone", &[]);
+        let err = execute(
+            deps.as_mut(), 
+            mock_env_at_time(conclude_time), 
+            info, 
+            conclude_msg
+        ).unwrap_err();
+        assert!(matches!(err, ContractError::DealAlreadyConcluded {}));
+
+        // Verify bids were not removed (optional, depending on your contract's behavior)
+        assert!(BIDS.may_load(deps.as_ref().storage, (1, &Addr::unchecked("bidder1"))).unwrap().is_some());
+        assert!(BIDS.may_load(deps.as_ref().storage, (1, &Addr::unchecked("bidder2"))).unwrap().is_some());
     }
 
     #[test]
