@@ -1,47 +1,90 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
 use cosmwasm_std::{
-    to_json_binary, Addr, CosmosMsg, CustomQuery, Querier, QuerierWrapper, StdResult, WasmMsg,
-    WasmQuery,
+    Addr, Coin, CosmosMsg, BankMsg, Uint128, WasmMsg,
+    to_binary, StdResult, Order, Storage,
 };
+use cw20::Cw20ExecuteMsg;
 
-use crate::msg::{ExecuteMsg, GetCountResponse, QueryMsg};
+use crate::state::{BIDS, Bid};
+use crate::error::ContractError;
 
-/// CwTemplateContract is a wrapper around Addr that provides a lot of helpers
-/// for working with this.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct CwTemplateContract(pub Addr);
+/// Creates a CosmosMsg for transferring CW20 tokens
+pub fn create_token_transfer_msg(
+    token_addr: String,
+    recipient: String,
+    amount: Uint128,
+) -> StdResult<CosmosMsg> {
+    Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: token_addr,
+        msg: to_binary(&Cw20ExecuteMsg::Transfer {
+            recipient,
+            amount,
+        })?,
+        funds: vec![],
+    }))
+}
 
-impl CwTemplateContract {
-    pub fn addr(&self) -> Addr {
-        self.0.clone()
+/// Creates a CosmosMsg for sending native tokens
+pub fn create_payment_msg(
+    recipient: String,
+    amount: Uint128,
+    denom: &str,
+) -> CosmosMsg {
+    CosmosMsg::Bank(BankMsg::Send {
+        to_address: recipient,
+        amount: vec![Coin {
+            denom: denom.to_string(),
+            amount,
+        }],
+    })
+}
+
+/// Retrieves all bids for a deal, sorted by discount percentage
+pub fn get_sorted_bids(
+    storage: &dyn Storage,
+    deal_id: u64,
+) -> StdResult<Vec<(String, Bid)>> {
+    let mut bids: Vec<(String, Bid)> = BIDS
+        .prefix(deal_id)
+        .range(storage, None, None, Order::Ascending)
+        .map(|item| {
+            let (addr, bid) = item?;
+            Ok((addr.to_string(), bid))
+        })
+        .collect::<StdResult<Vec<_>>>()?;
+    
+    bids.sort_by(|a, b| a.1.discount_percentage.cmp(&b.1.discount_percentage));
+    Ok(bids)
+}
+
+/// Validates deal time parameters
+pub fn validate_deal_times(
+    bid_start_time: u64,
+    bid_end_time: u64,
+    conclude_time: u64,
+    current_time: u64,
+) -> Result<(), ContractError> {
+    if bid_start_time >= bid_end_time {
+        return Err(ContractError::InvalidTimeParameters {
+            reason: "Bid start time must be before bid end time".to_string(),
+        });
     }
-
-    pub fn call<T: Into<ExecuteMsg>>(&self, msg: T) -> StdResult<CosmosMsg> {
-        let msg = to_json_binary(&msg.into())?;
-        Ok(WasmMsg::Execute {
-            contract_addr: self.addr().into(),
-            msg,
-            funds: vec![],
-        }
-        .into())
+    if bid_end_time >= conclude_time {
+        return Err(ContractError::InvalidTimeParameters {
+            reason: "Bid end time must be before conclude time".to_string(),
+        });
     }
-
-    /// Get Count
-    pub fn count<Q, T, CQ>(&self, querier: &Q) -> StdResult<GetCountResponse>
-    where
-        Q: Querier,
-        T: Into<String>,
-        CQ: CustomQuery,
-    {
-        let msg = QueryMsg::GetCount {};
-        let query = WasmQuery::Smart {
-            contract_addr: self.addr().into(),
-            msg: to_json_binary(&msg)?,
-        }
-        .into();
-        let res: GetCountResponse = QuerierWrapper::<CQ>::new(querier).query(&query)?;
-        Ok(res)
+    if bid_start_time < current_time {
+        return Err(ContractError::InvalidTimeParameters {
+            reason: "Bid start time must be in the future".to_string(),
+        });
     }
+    Ok(())
+}
+
+/// Calculates the platform fee for a given amount
+pub fn calculate_platform_fee(
+    amount: Uint128,
+    fee_percentage: u64,
+) -> StdResult<Uint128> {
+    amount.multiply_ratio(fee_percentage, 10000u128)
 }
