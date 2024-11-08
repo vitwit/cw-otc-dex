@@ -3,7 +3,8 @@ use cosmwasm_std::{
     StdResult, Uint128, entry_point, CosmosMsg, Storage,
 };
 use cw2::set_contract_version;
-
+use cosmwasm_std::Addr;
+use cosmwasm_std::attr;
 use crate::error::ContractError;
 use crate::msg::{
     ExecuteMsg, InstantiateMsg,
