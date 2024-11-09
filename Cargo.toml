@@ -25,24 +25,24 @@ incremental = false
 overflow-checks = true
 
 [features]
-default = []
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
 
 [package.metadata.scripts]
 optimize = """docker run --rm -v "$(pwd)":/code \
-  --mount type=volume,source="$(basename "$(pwd)")_cache",target=/target \
+  --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  cosmwasm/optimizer:0.15.0
+  cosmwasm/rust-optimizer:0.12.6
 """
 
 [dependencies]
-cosmwasm-std = "1.5.0"
 cosmwasm-schema = "1.5.0"
+cosmwasm-std = "1.5.0"
 cosmwasm-storage = "1.5.0"
 cw-storage-plus = "1.1.0"
 cw2 = "1.1.1"
-cw20 = "1.1.1"
 schemars = "0.8.15"
 serde = { version = "1.0.188", default-features = false, features = ["derive"] }
 thiserror = "1.0.49"
