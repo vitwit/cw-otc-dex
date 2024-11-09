@@ -69,8 +69,8 @@ pub enum ExecuteMsg {
 }
 
 /// Messages for querying contract state
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, QueryResponses)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
+#[derive(QueryResponses)]
 pub enum QueryMsg {
     /// Get a specific deal by ID
     #[returns(DealResponse)]
