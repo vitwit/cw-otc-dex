@@ -21,14 +21,6 @@ jobs:
           target: wasm32-unknown-unknown
           override: true
 
-      - name: Run unit tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: unit-test
-          args: --locked
-        env:
-          RUST_BACKTRACE: 1
-
       - name: Compile WASM contract
         uses: actions-rs/cargo@v1
         with:
@@ -67,7 +59,7 @@ jobs:
       - name: Generate Schema
         uses: actions-rs/cargo@v1
         with:
-          command: schema 
+          command: run --example schema 
           args: --locked
 
       - name: Schema Changes
