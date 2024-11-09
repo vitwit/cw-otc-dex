@@ -72,21 +72,84 @@ pub enum ExecuteMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, QueryResponses)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    /// Get details of a specific deal
+    /// Get a specific deal by ID
     #[returns(DealResponse)]
     GetDeal { deal_id: u64 },
-    /// Get all bids for a specific deal
+
+    /// List all deals with optional pagination
+    #[returns(DealsResponse)]
+    ListDeals {
+        start_after: Option<u64>,
+        limit: Option<u32>,
+    },
+
+    /// Get a specific bid for a deal
+    #[returns(BidResponse)]
+    GetBid {
+        deal_id: u64,
+        bidder: String,
+    },
+
+    /// List all bids for a specific deal
     #[returns(BidsResponse)]
-    GetBids { deal_id: u64 },
+    ListBidsForDeal {
+        deal_id: u64,
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
+
+    /// Get all deals by seller
+    #[returns(DealsResponse)]
+    ListDealsBySeller {
+        seller: String,
+        start_after: Option<u64>,
+        limit: Option<u32>,
+    },
+
+    /// Get all bids by bidder across all deals
+    #[returns(BidsResponse)]
+    ListBidsByBidder {
+        bidder: String,
+        start_after: Option<(u64, String)>, // (deal_id, bidder)
+        limit: Option<u32>,
+    },
+
+    /// Get active deals (not concluded and in bidding period)
+    #[returns(DealsResponse)]
+    ListActiveDeals {
+        start_after: Option<u64>,
+        limit: Option<u32>,
+    },
+
+    /// Get deals by status
+    #[returns(DealsResponse)]
+    ListDealsByStatus {
+        is_concluded: bool,
+        start_after: Option<u64>,
+        limit: Option<u32>,
+    },
+
     /// Get contract configuration
     #[returns(ConfigResponse)]
     GetConfig {},
+
+    /// Get deal statistics
+    #[returns(DealStatsResponse)]
+    GetDealStats {
+        deal_id: u64,
+    },
 }
 
 /// Response for GetDeal query
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct DealResponse {
     pub deal: Deal,
+}
+
+/// Response for GetBid query
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct BidResponse {
+    pub bid: Bid,
 }
 
 /// Response for GetBids query
@@ -99,4 +162,22 @@ pub struct BidsResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ConfigResponse {
     pub config: Config,
+}
+
+/// Response for ListDeals query
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct DealsResponse {
+    pub deals: Vec<Deal>,
+}
+
+#[cw_serde]
+pub struct DealStatsResponse {
+    pub total_bids_count: u32,
+    pub unique_bidders_count: u32,
+    pub average_discount: u64,
+    pub highest_bid_amount: Uint128,
+    pub lowest_bid_amount: Uint128,
+    pub total_bid_amount: Uint128,
+    pub min_cap_reached: bool,
+    pub time_remaining: Option<u64>,  // None if concluded or expired
 }

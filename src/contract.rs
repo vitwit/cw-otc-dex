@@ -1,10 +1,10 @@
 use cosmwasm_std::{
-    DepsMut, Env, MessageInfo, Response,
+    DepsMut, Env, MessageInfo, Response, Deps, Order, to_binary, Binary,
     StdResult, Uint128, entry_point, CosmosMsg, Storage,
 };
+use cosmwasm_std::StdError;
 use cw2::set_contract_version;
 use cosmwasm_std::Addr;
-use cosmwasm_std::attr;
 use crate::error::ContractError;
 use crate::msg::{
     ExecuteMsg, InstantiateMsg,
@@ -14,6 +14,9 @@ use crate::helpers::{
     create_token_transfer_msg, create_payment_msg, get_sorted_bids,
     validate_deal_times, calculate_platform_fee,
 };
+
+use crate::msg::{QueryMsg, DealResponse, DealsResponse, BidResponse, DealStatsResponse};
+use cw_storage_plus::Bound;
 
 /// Contract name and version info for migration
 const CONTRACT_NAME: &str = "crates.io:cosmos-otc-platform";
@@ -488,4 +491,272 @@ fn process_successful_deal(
     }
 
     Ok((messages, stats))
+}
+
+const DEFAULT_LIMIT: u32 = 10;
+const MAX_LIMIT: u32 = 30;
+
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    let response = match msg {
+        QueryMsg::GetDeal { deal_id } => to_binary(&query_deal(deps, deal_id)?),
+        QueryMsg::ListDeals { start_after, limit } => to_binary(&list_deals(deps, start_after, limit)?),
+        QueryMsg::GetBid { deal_id, bidder } => to_binary(&query_bid(deps, deal_id, bidder)?),
+        QueryMsg::ListBidsForDeal { deal_id, start_after, limit } => {
+            to_binary(&list_bids_for_deal(deps, deal_id, start_after, limit)?)
+        },
+        QueryMsg::ListDealsBySeller { seller, start_after, limit } => {
+            to_binary(&list_deals_by_seller(deps, seller, start_after, limit)?)
+        },
+        QueryMsg::ListBidsByBidder { bidder, start_after, limit } => {
+            to_binary(&list_bids_by_bidder(deps, bidder, start_after, limit)?)
+        },
+        QueryMsg::ListActiveDeals { start_after, limit } => {
+            to_binary(&list_active_deals(deps, env, start_after, limit)?)
+        },
+        QueryMsg::ListDealsByStatus { is_concluded, start_after, limit } => {
+            to_binary(&list_deals_by_status(deps, is_concluded, start_after, limit)?)
+        },
+        QueryMsg::GetConfig {} => to_binary(&query_config(deps)?),
+        QueryMsg::GetDealStats { deal_id } => to_binary(&query_deal_stats(deps, env, deal_id)?),
+    };
+    Ok(response?)
+}
+
+// Update return types of query functions to use StdResult instead of Result<_, ContractError>
+pub fn query_deal(deps: Deps, deal_id: u64) -> StdResult<DealResponse> {
+    let deal = DEALS.load(deps.storage, deal_id)
+        .map_err(|_| StdError::generic_err("Deal not found"))?;
+    Ok(DealResponse { deal })
+}
+
+pub fn query_bid(
+    deps: Deps, 
+    deal_id: u64, 
+    bidder: String,
+) -> StdResult<BidResponse> {
+    let addr = deps.api.addr_validate(&bidder)?;
+    let bid = BIDS
+        .load(deps.storage, (deal_id, &addr))
+        .map_err(|_| StdError::generic_err("Bid not found"))?;
+    Ok(BidResponse { bid })
+}
+
+pub fn list_bids_for_deal(
+    deps: Deps,
+    deal_id: u64,
+    start_after: Option<String>,
+    limit: Option<u32>,
+) -> StdResult<Vec<BidResponse>> {
+    // Check if deal exists
+    DEALS.load(deps.storage, deal_id)
+        .map_err(|_| StdError::generic_err("Deal not found"))?;
+
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    
+    // Convert start_after to validated address
+    let start_addr = match start_after {
+        Some(addr_str) => Some(deps.api.addr_validate(&addr_str)?),
+        None => None,
+    };
+
+    let start_bound = start_addr.as_ref().map(|addr| {
+        let bound_key = (deal_id, addr);
+        Bound::exclusive(bound_key)
+    });
+
+    // Query bids
+    let bids = BIDS
+        .range(
+            deps.storage,
+            start_bound,
+            Some(Bound::inclusive((deal_id + 1, &Addr::unchecked("")))),
+            Order::Ascending,
+        )
+        .filter(|r| matches!(r, Ok((key, _)) if key.0 == deal_id))
+        .take(limit)
+        .map(|item| item.map(|(_, bid)| BidResponse { bid }))
+        .collect::<StdResult<Vec<_>>>()?;
+
+    Ok(bids)
+}
+
+pub fn list_deals(
+    deps: Deps,
+    start_after: Option<u64>,
+    limit: Option<u32>,
+) -> StdResult<DealsResponse> {
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after.map(Bound::exclusive);
+
+    let deals: StdResult<Vec<Deal>> = DEALS
+        .range(deps.storage, start, None, Order::Ascending)
+        .take(limit)
+        .map(|item| item.map(|(_, deal)| deal))
+        .collect();
+
+    Ok(DealsResponse { deals: deals? })
+}
+
+pub fn list_deals_by_seller(
+    deps: Deps,
+    seller: String,
+    start_after: Option<u64>,
+    limit: Option<u32>,
+) -> StdResult<DealsResponse> {
+    let seller_addr = deps.api.addr_validate(&seller)?;
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after.map(Bound::exclusive);
+
+    let deals: StdResult<Vec<Deal>> = DEALS
+        .range(deps.storage, start, None, Order::Ascending)
+        .filter(|r| match r {
+            Ok((_, deal)) => deal.seller == seller_addr,
+            Err(_) => true, // Keep errors to handle them in collect
+        })
+        .take(limit)
+        .map(|item| item.map(|(_, deal)| deal))
+        .collect();
+
+    Ok(DealsResponse { deals: deals? })
+}
+
+pub fn list_bids_by_bidder(
+    deps: Deps,
+    bidder: String,
+    start_after: Option<(u64, String)>,
+    limit: Option<u32>,
+) -> StdResult<Vec<(u64, BidResponse)>> {
+    let bidder_addr = deps.api.addr_validate(&bidder)?;
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    
+    // Convert start_after into a proper bound
+    let start = start_after
+        .map(|(deal_id, _)| deal_id)
+        .map(|id| (id, &bidder_addr));
+
+    let mut bids = vec![];
+    
+    let bid_range = BIDS.range(
+        deps.storage,
+        start.map(Bound::exclusive),
+        None,
+        Order::Ascending,
+    );
+
+    for result in bid_range {
+        let ((deal_id, addr), bid) = result?;
+        if addr == bidder_addr {
+            bids.push((deal_id, BidResponse { bid }));
+            if bids.len() >= limit {
+                break;
+            }
+        }
+    }
+
+    Ok(bids)
+}
+
+pub fn list_active_deals(
+    deps: Deps,
+    env: Env,
+    start_after: Option<u64>,
+    limit: Option<u32>,
+) -> StdResult<DealsResponse> {
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after.map(Bound::exclusive);
+    let current_time = env.block.time.seconds();
+
+    let deals: StdResult<Vec<Deal>> = DEALS
+        .range(deps.storage, start, None, Order::Ascending)
+        .filter(|r| match r {
+            Ok((_, deal)) => {
+                !deal.is_concluded && 
+                deal.bid_start_time <= current_time && 
+                deal.bid_end_time > current_time
+            }
+            Err(_) => true, // Keep errors to handle them in collect
+        })
+        .take(limit)
+        .map(|item| item.map(|(_, deal)| deal))
+        .collect();
+
+    Ok(DealsResponse { deals: deals? })
+}
+
+pub fn list_deals_by_status(
+    deps: Deps,
+    is_concluded: bool,
+    start_after: Option<u64>,
+    limit: Option<u32>,
+) -> StdResult<DealsResponse> {
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after.map(Bound::exclusive);
+
+    let deals: StdResult<Vec<Deal>> = DEALS
+        .range(deps.storage, start, None, Order::Ascending)
+        .filter(|r| match r {
+            Ok((_, deal)) => deal.is_concluded == is_concluded,
+            Err(_) => true, // Keep errors to handle them in collect
+        })
+        .take(limit)
+        .map(|item| item.map(|(_, deal)| deal))
+        .collect();
+
+    Ok(DealsResponse { deals: deals? })
+}
+
+pub fn query_config(deps: Deps) -> StdResult<Config> {
+    CONFIG.load(deps.storage)
+}
+
+pub fn query_deal_stats(
+    deps: Deps,
+    env: Env,
+    deal_id: u64,
+) -> StdResult<DealStatsResponse> {
+    let deal = DEALS.load(deps.storage, deal_id)
+        .map_err(|_| StdError::generic_err("Deal not found"))?;
+    let current_time = env.block.time.seconds();
+
+    let mut total_bids_count = 0u32;
+    let mut total_discount = 0u64;
+    let mut highest_bid_amount = Uint128::zero();
+    let mut lowest_bid_amount = None;
+    let mut total_bid_amount = Uint128::zero();
+    let mut bidders = std::collections::HashSet::new();
+
+    // Process all bids for the deal
+    for result in BIDS.prefix(deal_id).range(deps.storage, None, None, Order::Ascending) {
+        let (_, bid) = result?;
+        total_bids_count += 1;
+        total_discount += bid.discount_percentage;
+        highest_bid_amount = std::cmp::max(highest_bid_amount, bid.amount);
+        lowest_bid_amount = Some(lowest_bid_amount.map_or(bid.amount, |current| std::cmp::min(current, bid.amount)));
+        total_bid_amount += bid.amount;
+        bidders.insert(bid.bidder);
+    }
+
+    // Calculate time remaining if deal is active
+    let time_remaining = if !deal.is_concluded && current_time < deal.conclude_time {
+        Some(deal.conclude_time.saturating_sub(current_time))
+    } else {
+        None
+    };
+
+    let average_discount = if total_bids_count > 0 {
+        total_discount / total_bids_count as u64
+    } else {
+        0
+    };
+
+    Ok(DealStatsResponse {
+        total_bids_count,
+        unique_bidders_count: bidders.len() as u32,
+        average_discount,
+        highest_bid_amount,
+        lowest_bid_amount: lowest_bid_amount.unwrap_or_else(Uint128::zero),
+        total_bid_amount,
+        min_cap_reached: total_bid_amount >= deal.min_cap,
+        time_remaining,
+    })
 }

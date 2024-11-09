@@ -1,8 +1,7 @@
-// error.rs
 use cosmwasm_std::{StdError, OverflowError};
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
@@ -13,36 +12,30 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
+    #[error("Deal not found")]
+    DealNotFound {},
+
+    #[error("Bid not found")]
+    BidNotFound {},
+
+    #[error("Deal already concluded")]
+    DealAlreadyConcluded {},
+
     #[error("Invalid time parameters: {reason}")]
     InvalidTimeParameters { reason: String },
 
-    #[error("Bidding has not started yet")]
+    #[error("Invalid bid amount: {reason}")]
+    InvalidBidAmount { reason: String },
+
+    #[error("Insufficient platform fee. Required: {required}, provided: {provided}")]
+    InsufficientPlatformFee { required: u128, provided: u128 },
+
+    #[error("Bidding has not started")]
     BiddingNotStarted {},
 
     #[error("Bidding has ended")]
     BiddingEnded {},
 
-    #[error("Deal cannot be concluded yet")]
+    #[error("Conclusion time not reached")]
     ConclusionTimeNotReached {},
-
-    #[error("Deal already concluded")]
-    DealAlreadyConcluded {},
-
-    #[error("Insufficient platform fee. Required: {required}, provided: {provided}")]
-    InsufficientPlatformFee {
-        required: u128,
-        provided: u128,
-    },
-
-    #[error("Invalid bid amount: {reason}")]
-    InvalidBidAmount { reason: String },
-
-    #[error("Bid not found for deal {deal_id} from bidder {bidder}")]
-    BidNotFound {
-        deal_id: u64,
-        bidder: String,
-    },
-
-    #[error("Insufficient funds")]
-    InsufficientFunds {},
 }
