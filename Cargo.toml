@@ -1,17 +1,19 @@
 [package]
 name = "cw-otc-dex"
+description = "CosmWasm OTC Trading Platform"
 version = "0.1.0"
 authors = ["anilcse <anil@vitwit.com>"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[lib]
-crate-type = ["cdylib", "rlib"]
-
 [[example]]
 name = "schema"
 path = "examples/schema.rs"
+
+
+[lib]
+crate-type = ["cdylib", "rlib"]
 
 [profile.release]
 opt-level = 3
@@ -34,7 +36,7 @@ library = []
 optimize = """docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  cosmwasm/rust-optimizer:0.12.6
+  cosmwasm/rust-optimizer:0.14.0
 """
 
 [dependencies]
