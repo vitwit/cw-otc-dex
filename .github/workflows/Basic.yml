@@ -59,7 +59,7 @@ jobs:
       - name: Generate Schema
         uses: actions-rs/cargo@v1
         with:
-          command: run --example schema 
+          command: schema 
           args: --locked
 
       - name: Schema Changes
