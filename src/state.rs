@@ -4,7 +4,7 @@ use cw_storage_plus::{Item, Map};
 
 #[cw_serde]
 pub struct Config {
-    pub platform_fee_percentage: u64,  // In basis points (100 = 1%)
+    pub platform_fee_percentage: u64, // In basis points (100 = 1%)
 }
 
 #[cw_serde]
@@ -13,7 +13,7 @@ pub struct Deal {
     pub sell_token: String,
     pub total_amount: Uint128,
     pub min_price: Uint128,
-    pub discount_percentage: u64,  // In basis points (100 = 1%)
+    pub discount_percentage: u64, // In basis points (100 = 1%)
     pub min_cap: Uint128,
     pub bid_start_time: u64,
     pub bid_end_time: u64,
@@ -46,15 +46,15 @@ pub const ACTIVE_DEALS: Map<u64, bool> = Map::new("active_deals");
 // Helper functions for state management
 impl Deal {
     pub fn is_active(&self, current_time: u64) -> bool {
-        !self.is_concluded && 
-        self.bid_start_time <= current_time && 
-        self.bid_end_time > current_time
+        !self.is_concluded
+            && self.bid_start_time <= current_time
+            && self.bid_end_time > current_time
     }
 
     pub fn validate_times(&self, current_time: u64) -> bool {
-        self.bid_start_time > current_time &&
-        self.bid_end_time > self.bid_start_time &&
-        self.conclude_time > self.bid_end_time
+        self.bid_start_time > current_time
+            && self.bid_end_time > self.bid_start_time
+            && self.conclude_time > self.bid_end_time
     }
 
     pub fn can_conclude(&self, current_time: u64) -> bool {
@@ -62,20 +62,21 @@ impl Deal {
     }
 
     pub fn can_bid(&self, current_time: u64) -> bool {
-        !self.is_concluded && 
-        current_time >= self.bid_start_time && 
-        current_time < self.bid_end_time
+        !self.is_concluded
+            && current_time >= self.bid_start_time
+            && current_time < self.bid_end_time
     }
 }
 
 impl Bid {
     pub fn validate_bid(&self, deal: &Deal) -> bool {
-        self.amount > Uint128::zero() &&
-        self.discount_percentage <= 10000 // Max 100%
+        self.amount > Uint128::zero() && self.discount_percentage <= 10000 // Max 100%
     }
 
     pub fn calculate_final_price(&self, deal: &Deal) -> Uint128 {
-        let base_price = self.amount.multiply_ratio(deal.min_price, Uint128::new(1u128));
+        let base_price = self
+            .amount
+            .multiply_ratio(deal.min_price, Uint128::new(1u128));
         let discount = base_price.multiply_ratio(self.discount_percentage, 100u128);
         base_price.saturating_sub(discount)
     }

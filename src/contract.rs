@@ -1,21 +1,19 @@
-use cosmwasm_std::{
-    DepsMut, Env, MessageInfo, Response, Deps, Order, to_binary, Binary,
-    StdResult, Uint128, entry_point, CosmosMsg, Storage,
-};
-use cosmwasm_std::StdError;
-use cw2::set_contract_version;
-use cosmwasm_std::Addr;
 use crate::error::ContractError;
-use crate::msg::{
-    ExecuteMsg, InstantiateMsg,
-};
-use crate::state::{Config, Deal, Bid, CONFIG, DEAL_COUNTER, DEALS, BIDS};
 use crate::helpers::{
-    create_token_transfer_msg, create_payment_msg, get_sorted_bids,
-    validate_deal_times, calculate_platform_fee,
+    calculate_platform_fee, create_payment_msg, create_token_transfer_msg, get_sorted_bids,
+    validate_deal_times,
 };
+use crate::msg::{ExecuteMsg, InstantiateMsg};
+use crate::state::{Bid, Config, Deal, BIDS, CONFIG, DEALS, DEAL_COUNTER};
+use cosmwasm_std::Addr;
+use cosmwasm_std::StdError;
+use cosmwasm_std::{
+    entry_point, to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Order, Response,
+    StdResult, Storage, Uint128,
+};
+use cw2::set_contract_version;
 
-use crate::msg::{QueryMsg, DealResponse, DealsResponse, BidResponse, DealStatsResponse};
+use crate::msg::{BidResponse, DealResponse, DealStatsResponse, DealsResponse, QueryMsg};
 use cw_storage_plus::Bound;
 
 /// Contract name and version info for migration
@@ -42,7 +40,7 @@ pub fn instantiate(
     let config = Config {
         platform_fee_percentage: msg.platform_fee_percentage,
     };
-    
+
     CONFIG.save(deps.storage, &config)?;
     DEAL_COUNTER.save(deps.storage, &0u64)?;
 
@@ -87,13 +85,29 @@ pub fn execute(
             amount,
             discount_percentage,
             max_price,
-        } => execute_place_bid(deps, env, info, deal_id, amount, discount_percentage, max_price),
+        } => execute_place_bid(
+            deps,
+            env,
+            info,
+            deal_id,
+            amount,
+            discount_percentage,
+            max_price,
+        ),
         ExecuteMsg::UpdateBid {
             deal_id,
             new_amount,
             new_discount_percentage,
             new_max_price,
-        } => execute_update_bid(deps, env, info, deal_id, new_amount, new_discount_percentage, new_max_price),
+        } => execute_update_bid(
+            deps,
+            env,
+            info,
+            deal_id,
+            new_amount,
+            new_discount_percentage,
+            new_max_price,
+        ),
         ExecuteMsg::WithdrawBid { deal_id } => execute_withdraw_bid(deps, env, info, deal_id),
         ExecuteMsg::ConcludeDeal { deal_id } => execute_conclude_deal(deps, env, info, deal_id),
     }
@@ -131,7 +145,7 @@ pub fn execute_create_deal(
     // Calculate and validate platform fee
     let config = CONFIG.load(deps.storage)?;
     let platform_fee = calculate_platform_fee(total_amount, config.platform_fee_percentage)?;
-    
+
     // Ensure seller has sent enough platform fee
     let provided_fee = info
         .funds
@@ -184,7 +198,7 @@ pub fn execute_place_bid(
     max_price: Option<Uint128>,
 ) -> Result<Response, ContractError> {
     let deal = DEALS.load(deps.storage, deal_id)?;
-    
+
     // Validate bid timing
     let current_time = env.block.time.seconds();
     if current_time < deal.bid_start_time {
@@ -216,7 +230,7 @@ pub fn execute_place_bid(
     };
 
     BIDS.save(deps.storage, (deal_id, &info.sender), &bid)?;
-    
+
     // Update total bids amount
     let new_total = deal.total_bids_amount + amount;
     DEALS.update(deps.storage, deal_id, |deal_opt| -> StdResult<_> {
@@ -243,7 +257,7 @@ pub fn execute_update_bid(
     new_max_price: Option<Uint128>,
 ) -> Result<Response, ContractError> {
     let deal = DEALS.load(deps.storage, deal_id)?;
-    
+
     // Validate timing
     if env.block.time.seconds() >= deal.bid_end_time {
         return Err(ContractError::BiddingEnded {});
@@ -251,7 +265,7 @@ pub fn execute_update_bid(
 
     // Load existing bid
     let old_bid = BIDS.load(deps.storage, (deal_id, &info.sender))?;
-    
+
     // Update total bids amount
     let amount_diff = new_amount.checked_sub(old_bid.amount)?;
     DEALS.update(deps.storage, deal_id, |deal_opt| -> StdResult<_> {
@@ -283,7 +297,7 @@ pub fn execute_withdraw_bid(
     deal_id: u64,
 ) -> Result<Response, ContractError> {
     let deal = DEALS.load(deps.storage, deal_id)?;
-    
+
     // Validate timing
     if env.block.time.seconds() >= deal.bid_end_time {
         return Err(ContractError::BiddingEnded {});
@@ -307,7 +321,7 @@ pub fn execute_withdraw_bid(
 }
 
 /// Concludes an OTC deal by processing all bids and distributing tokens
-/// 
+///
 /// # Deal Conclusion Process
 /// 1. Validates deal timing and status
 /// 2. Checks if minimum cap is met
@@ -318,13 +332,13 @@ pub fn execute_withdraw_bid(
 ///    - Transfers tokens to successful bidders
 ///    - Transfers payments to seller
 ///    - Refunds unsuccessful bidders
-/// 
+///
 /// # Arguments
 /// * `deps` - Mutable dependencies for storage access
 /// * `env` - Environment variables, primarily used for time validation
 /// * `_info` - Message information (unused but kept for consistency)
 /// * `deal_id` - Identifier of the deal to conclude
-/// 
+///
 /// # Returns
 /// * `Response` - Success response with transfer messages and events
 /// * `ContractError` - Various error conditions that might occur
@@ -336,7 +350,7 @@ pub fn execute_conclude_deal(
 ) -> Result<Response, ContractError> {
     // Load deal data
     let mut deal = DEALS.load(deps.storage, deal_id)?;
-    
+
     // Validation: Check timing and conclusion status
     if env.block.time.seconds() < deal.conclude_time {
         return Err(ContractError::ConclusionTimeNotReached {});
@@ -348,7 +362,7 @@ pub fn execute_conclude_deal(
     // Case 1: Minimum cap not met - refund all bidders
     if deal.total_bids_amount < deal.min_cap {
         let refund_messages = process_failed_deal(deps.storage, deal_id)?;
-        
+
         // Mark deal as concluded
         deal.is_concluded = true;
         DEALS.save(deps.storage, deal_id, &deal)?;
@@ -362,11 +376,7 @@ pub fn execute_conclude_deal(
     }
 
     // Case 2: Process successful deal
-    let (messages, stats) = process_successful_deal(
-        deps.storage,
-        &deal,
-        deal_id,
-    )?;
+    let (messages, stats) = process_successful_deal(deps.storage, &deal, deal_id)?;
 
     // Mark deal as concluded
     deal.is_concluded = true;
@@ -400,9 +410,7 @@ fn process_failed_deal(
 
     for (bidder, bid) in bids {
         messages.push(create_payment_msg(
-            bidder,
-            bid.amount,
-            "uusd", // Replace with actual denom
+            bidder, bid.amount, "uusd", // Replace with actual denom
         ));
     }
 
@@ -430,18 +438,14 @@ fn process_successful_deal(
     for (bidder, bid) in bids {
         if remaining_tokens.is_zero() {
             // Refund remaining bids
-            messages.push(create_payment_msg(
-                bidder,
-                bid.amount,
-                "uusd",
-            ));
+            messages.push(create_payment_msg(bidder, bid.amount, "uusd"));
             stats.refunded_bids += 1;
             continue;
         }
 
         // Calculate token allocation
         let tokens_to_receive = std::cmp::min(bid.amount, remaining_tokens);
-        
+
         // Calculate final price with discount
         let base_price = tokens_to_receive.multiply_ratio(deal.min_price, Uint128::new(1u128));
         let discount = base_price.multiply_ratio(bid.discount_percentage, 100u128);
@@ -450,18 +454,14 @@ fn process_successful_deal(
         // Check if price meets buyer's max price constraint
         if let Some(max_price) = bid.max_price {
             if final_price > max_price {
-                messages.push(create_payment_msg(
-                    bidder,
-                    bid.amount,
-                    "uusd",
-                ));
+                messages.push(create_payment_msg(bidder, bid.amount, "uusd"));
                 stats.refunded_bids += 1;
                 continue;
             }
         }
 
         // Process successful bid
-        
+
         // 1. Transfer tokens to buyer
         messages.push(create_token_transfer_msg(
             deal.sell_token.clone(),
@@ -470,11 +470,7 @@ fn process_successful_deal(
         )?);
 
         // 2. Transfer payment to seller
-        messages.push(create_payment_msg(
-            deal.seller.clone(),
-            final_price,
-            "uusd",
-        ));
+        messages.push(create_payment_msg(deal.seller.clone(), final_price, "uusd"));
 
         // Update running totals
         remaining_tokens = remaining_tokens.checked_sub(tokens_to_receive)?;
@@ -485,8 +481,8 @@ fn process_successful_deal(
 
     // Validate all tokens are accounted for
     if stats.tokens_sold + remaining_tokens != deal.total_amount {
-        return Err(ContractError::InvalidBidAmount { 
-            reason: "Token allocation mismatch".to_string() 
+        return Err(ContractError::InvalidBidAmount {
+            reason: "Token allocation mismatch".to_string(),
         });
     }
 
@@ -499,23 +495,38 @@ const MAX_LIMIT: u32 = 30;
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     let response = match msg {
         QueryMsg::GetDeal { deal_id } => to_binary(&query_deal(deps, deal_id)?),
-        QueryMsg::ListDeals { start_after, limit } => to_binary(&list_deals(deps, start_after, limit)?),
+        QueryMsg::ListDeals { start_after, limit } => {
+            to_binary(&list_deals(deps, start_after, limit)?)
+        }
         QueryMsg::GetBid { deal_id, bidder } => to_binary(&query_bid(deps, deal_id, bidder)?),
-        QueryMsg::ListBidsForDeal { deal_id, start_after, limit } => {
-            to_binary(&list_bids_for_deal(deps, deal_id, start_after, limit)?)
-        },
-        QueryMsg::ListDealsBySeller { seller, start_after, limit } => {
-            to_binary(&list_deals_by_seller(deps, seller, start_after, limit)?)
-        },
-        QueryMsg::ListBidsByBidder { bidder, start_after, limit } => {
-            to_binary(&list_bids_by_bidder(deps, bidder, start_after, limit)?)
-        },
+        QueryMsg::ListBidsForDeal {
+            deal_id,
+            start_after,
+            limit,
+        } => to_binary(&list_bids_for_deal(deps, deal_id, start_after, limit)?),
+        QueryMsg::ListDealsBySeller {
+            seller,
+            start_after,
+            limit,
+        } => to_binary(&list_deals_by_seller(deps, seller, start_after, limit)?),
+        QueryMsg::ListBidsByBidder {
+            bidder,
+            start_after,
+            limit,
+        } => to_binary(&list_bids_by_bidder(deps, bidder, start_after, limit)?),
         QueryMsg::ListActiveDeals { start_after, limit } => {
             to_binary(&list_active_deals(deps, env, start_after, limit)?)
-        },
-        QueryMsg::ListDealsByStatus { is_concluded, start_after, limit } => {
-            to_binary(&list_deals_by_status(deps, is_concluded, start_after, limit)?)
-        },
+        }
+        QueryMsg::ListDealsByStatus {
+            is_concluded,
+            start_after,
+            limit,
+        } => to_binary(&list_deals_by_status(
+            deps,
+            is_concluded,
+            start_after,
+            limit,
+        )?),
         QueryMsg::GetConfig {} => to_binary(&query_config(deps)?),
         QueryMsg::GetDealStats { deal_id } => to_binary(&query_deal_stats(deps, env, deal_id)?),
     };
@@ -524,16 +535,13 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 // Update return types of query functions to use StdResult instead of Result<_, ContractError>
 pub fn query_deal(deps: Deps, deal_id: u64) -> StdResult<DealResponse> {
-    let deal = DEALS.load(deps.storage, deal_id)
+    let deal = DEALS
+        .load(deps.storage, deal_id)
         .map_err(|_| StdError::generic_err("Deal not found"))?;
     Ok(DealResponse { deal })
 }
 
-pub fn query_bid(
-    deps: Deps, 
-    deal_id: u64, 
-    bidder: String,
-) -> StdResult<BidResponse> {
+pub fn query_bid(deps: Deps, deal_id: u64, bidder: String) -> StdResult<BidResponse> {
     let addr = deps.api.addr_validate(&bidder)?;
     let bid = BIDS
         .load(deps.storage, (deal_id, &addr))
@@ -548,11 +556,12 @@ pub fn list_bids_for_deal(
     limit: Option<u32>,
 ) -> StdResult<Vec<BidResponse>> {
     // Check if deal exists
-    DEALS.load(deps.storage, deal_id)
+    DEALS
+        .load(deps.storage, deal_id)
         .map_err(|_| StdError::generic_err("Deal not found"))?;
 
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    
+
     // Convert start_after to validated address
     let start_addr = match start_after {
         Some(addr_str) => Some(deps.api.addr_validate(&addr_str)?),
@@ -628,14 +637,14 @@ pub fn list_bids_by_bidder(
 ) -> StdResult<Vec<(u64, BidResponse)>> {
     let bidder_addr = deps.api.addr_validate(&bidder)?;
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    
+
     // Convert start_after into a proper bound
     let start = start_after
         .map(|(deal_id, _)| deal_id)
         .map(|id| (id, &bidder_addr));
 
     let mut bids = vec![];
-    
+
     let bid_range = BIDS.range(
         deps.storage,
         start.map(Bound::exclusive),
@@ -670,9 +679,9 @@ pub fn list_active_deals(
         .range(deps.storage, start, None, Order::Ascending)
         .filter(|r| match r {
             Ok((_, deal)) => {
-                !deal.is_concluded && 
-                deal.bid_start_time <= current_time && 
-                deal.bid_end_time > current_time
+                !deal.is_concluded
+                    && deal.bid_start_time <= current_time
+                    && deal.bid_end_time > current_time
             }
             Err(_) => true, // Keep errors to handle them in collect
         })
@@ -709,12 +718,9 @@ pub fn query_config(deps: Deps) -> StdResult<Config> {
     CONFIG.load(deps.storage)
 }
 
-pub fn query_deal_stats(
-    deps: Deps,
-    env: Env,
-    deal_id: u64,
-) -> StdResult<DealStatsResponse> {
-    let deal = DEALS.load(deps.storage, deal_id)
+pub fn query_deal_stats(deps: Deps, env: Env, deal_id: u64) -> StdResult<DealStatsResponse> {
+    let deal = DEALS
+        .load(deps.storage, deal_id)
         .map_err(|_| StdError::generic_err("Deal not found"))?;
     let current_time = env.block.time.seconds();
 
@@ -726,12 +732,17 @@ pub fn query_deal_stats(
     let mut bidders = std::collections::HashSet::new();
 
     // Process all bids for the deal
-    for result in BIDS.prefix(deal_id).range(deps.storage, None, None, Order::Ascending) {
+    for result in BIDS
+        .prefix(deal_id)
+        .range(deps.storage, None, None, Order::Ascending)
+    {
         let (_, bid) = result?;
         total_bids_count += 1;
         total_discount += bid.discount_percentage;
         highest_bid_amount = std::cmp::max(highest_bid_amount, bid.amount);
-        lowest_bid_amount = Some(lowest_bid_amount.map_or(bid.amount, |current| std::cmp::min(current, bid.amount)));
+        lowest_bid_amount = Some(
+            lowest_bid_amount.map_or(bid.amount, |current| std::cmp::min(current, bid.amount)),
+        );
         total_bid_amount += bid.amount;
         bidders.insert(bid.bidder);
     }

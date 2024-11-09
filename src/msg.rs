@@ -1,8 +1,8 @@
+use crate::state::{Bid, Config, Deal};
+use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use cosmwasm_std::Uint128;
-use cosmwasm_schema::{cw_serde, QueryResponses};
-use crate::state::{Config, Deal, Bid};
 
 /// Message for contract instantiation
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -85,10 +85,7 @@ pub enum QueryMsg {
 
     /// Get a specific bid for a deal
     #[returns(BidResponse)]
-    GetBid {
-        deal_id: u64,
-        bidder: String,
-    },
+    GetBid { deal_id: u64, bidder: String },
 
     /// List all bids for a specific deal
     #[returns(BidsResponse)]
@@ -135,9 +132,7 @@ pub enum QueryMsg {
 
     /// Get deal statistics
     #[returns(DealStatsResponse)]
-    GetDealStats {
-        deal_id: u64,
-    },
+    GetDealStats { deal_id: u64 },
 }
 
 /// Response for GetDeal query
@@ -179,5 +174,5 @@ pub struct DealStatsResponse {
     pub lowest_bid_amount: Uint128,
     pub total_bid_amount: Uint128,
     pub min_cap_reached: bool,
-    pub time_remaining: Option<u64>,  // None if concluded or expired
+    pub time_remaining: Option<u64>, // None if concluded or expired
 }

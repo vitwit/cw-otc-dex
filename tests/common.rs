@@ -2,13 +2,13 @@
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{Env, Timestamp, coins, Addr, Uint128, DepsMut, BankMsg, CosmosMsg, SubMsg};
+    use cosmwasm_std::{coins, Addr, BankMsg, CosmosMsg, DepsMut, Env, SubMsg, Timestamp, Uint128};
 
-    use cw_otc_dex::msg::{ExecuteMsg, InstantiateMsg};
-    use cw_otc_dex::state::{BIDS, CONFIG, DEAL_COUNTER, DEALS, Bid, Config, Deal};
+    use cw_otc_dex::contract::{execute, execute_conclude_deal, instantiate};
     use cw_otc_dex::error::ContractError;
-    use cw_otc_dex::contract::{execute, instantiate, execute_conclude_deal};
-    
+    use cw_otc_dex::msg::{ExecuteMsg, InstantiateMsg};
+    use cw_otc_dex::state::{Bid, Config, Deal, BIDS, CONFIG, DEALS, DEAL_COUNTER};
+
     const PLATFORM_FEE_PERCENTAGE: u64 = 100; // 1%
     const MOCK_SELL_TOKEN: &str = "token";
     const MOCK_PAYMENT_DENOM: &str = "uusd";
@@ -28,9 +28,9 @@ mod tests {
             min_price: Uint128::new(1u128),
             discount_percentage: 1000, // 10%
             min_cap: Uint128::new(500000u128),
-            bid_start_time: start_time + 1000,    // Ensure future start
-            bid_end_time: start_time + 2000,      // End time after start
-            conclude_time: start_time + 3000,     // Conclude time after end
+            bid_start_time: start_time + 1000, // Ensure future start
+            bid_end_time: start_time + 2000,   // End time after start
+            conclude_time: start_time + 3000,  // Conclude time after end
         }
     }
 
@@ -58,7 +58,7 @@ mod tests {
     fn test_create_deal() {
         let mut deps = mock_dependencies();
         setup_contract(deps.as_mut());
-        
+
         let current_time = 1000u64;
         let env = mock_env_at_time(current_time);
         let total_amount = Uint128::new(1000000u128);
@@ -66,7 +66,10 @@ mod tests {
         let msg = create_test_deal_msg(current_time);
 
         // Test with insufficient platform fee
-        let info = mock_info("seller", &coins(platform_fee.u128() - 1, MOCK_PAYMENT_DENOM));
+        let info = mock_info(
+            "seller",
+            &coins(platform_fee.u128() - 1, MOCK_PAYMENT_DENOM),
+        );
         let err = execute(deps.as_mut(), env.clone(), info, msg.clone()).unwrap_err();
         assert!(matches!(err, ContractError::InsufficientPlatformFee { .. }));
 
@@ -74,7 +77,7 @@ mod tests {
         let info = mock_info("seller", &coins(platform_fee.u128(), MOCK_PAYMENT_DENOM));
         let res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
         assert_eq!(res.attributes.len(), 3);
-        
+
         let deal = DEALS.load(deps.as_ref().storage, 1).unwrap();
         assert_eq!(deal.seller, "seller");
         assert_eq!(deal.total_amount, total_amount);
@@ -85,15 +88,15 @@ mod tests {
     fn test_place_bid() {
         let mut deps = mock_dependencies();
         setup_contract(deps.as_mut());
-        
+
         let start_time = 1000u64;
         let env = mock_env_at_time(start_time);
-        
+
         // Create deal
         let total_amount = Uint128::new(1000000u128);
         let platform_fee = total_amount.multiply_ratio(PLATFORM_FEE_PERCENTAGE as u128, 10000u128);
         let create_msg = create_test_deal_msg(start_time);
-        
+
         let info = mock_info("seller", &coins(platform_fee.u128(), MOCK_PAYMENT_DENOM));
         execute(deps.as_mut(), env.clone(), info, create_msg).unwrap();
 
@@ -111,7 +114,9 @@ mod tests {
         let res = execute(deps.as_mut(), bid_env.clone(), info, bid_msg).unwrap();
         assert_eq!(res.attributes.len(), 4);
 
-        let bid = BIDS.load(deps.as_ref().storage, (1, &Addr::unchecked("bidder1"))).unwrap();
+        let bid = BIDS
+            .load(deps.as_ref().storage, (1, &Addr::unchecked("bidder1")))
+            .unwrap();
         assert_eq!(bid.amount, Uint128::new(100000u128));
         assert_eq!(bid.discount_percentage, 500);
     }
@@ -120,15 +125,15 @@ mod tests {
     fn test_update_bid() {
         let mut deps = mock_dependencies();
         setup_contract(deps.as_mut());
-        
+
         let start_time = 1000u64;
         let env = mock_env_at_time(start_time);
-        
+
         // Create deal
         let total_amount = Uint128::new(1000000u128);
         let platform_fee = total_amount.multiply_ratio(PLATFORM_FEE_PERCENTAGE as u128, 10000u128);
         let create_msg = create_test_deal_msg(start_time);
-        
+
         let info = mock_info("seller", &coins(platform_fee.u128(), MOCK_PAYMENT_DENOM));
         execute(deps.as_mut(), env.clone(), info, create_msg).unwrap();
 
@@ -156,7 +161,9 @@ mod tests {
         let res = execute(deps.as_mut(), bid_env.clone(), info, update_msg).unwrap();
         assert_eq!(res.attributes.len(), 3);
 
-        let bid = BIDS.load(deps.as_ref().storage, (1, &Addr::unchecked("bidder1"))).unwrap();
+        let bid = BIDS
+            .load(deps.as_ref().storage, (1, &Addr::unchecked("bidder1")))
+            .unwrap();
         assert_eq!(bid.amount, Uint128::new(150000u128));
         assert_eq!(bid.discount_percentage, 600);
     }
@@ -164,15 +171,15 @@ mod tests {
     fn test_conclude_deal() {
         let mut deps = mock_dependencies();
         setup_contract(deps.as_mut());
-        
+
         let start_time = 1000u64;
         let env = mock_env_at_time(start_time);
-        
+
         // Create test deal
         let total_amount = Uint128::new(1000000u128);
         let platform_fee = total_amount.multiply_ratio(PLATFORM_FEE_PERCENTAGE as u128, 10000u128);
         let create_msg = create_test_deal_msg(start_time);
-        
+
         let info = mock_info("seller", &coins(platform_fee.u128(), MOCK_PAYMENT_DENOM));
         execute(deps.as_mut(), env.clone(), info, create_msg).unwrap();
 
@@ -195,15 +202,24 @@ mod tests {
         // Test failed deal (below min cap)
         let conclude_msg = ExecuteMsg::ConcludeDeal { deal_id: 1 };
         let info = mock_info("anyone", &[]);
-        let res = execute(deps.as_mut(), conclude_env.clone(), info.clone(), conclude_msg.clone()).unwrap();
-        
+        let res = execute(
+            deps.as_mut(),
+            conclude_env.clone(),
+            info.clone(),
+            conclude_msg.clone(),
+        )
+        .unwrap();
+
         assert!(res.messages.len() > 0);
-        assert!(res.attributes.iter().any(|attr| attr.value == "min_cap_not_met"));
+        assert!(res
+            .attributes
+            .iter()
+            .any(|attr| attr.value == "min_cap_not_met"));
 
         // Reset for successful conclusion test
         let mut deps = mock_dependencies();
         setup_contract(deps.as_mut());
-        
+
         // Create new deal
         let env = mock_env_at_time(start_time);
         // Create a new message instead of reusing the moved one
@@ -225,26 +241,29 @@ mod tests {
         // Test successful conclusion
         let info = mock_info("anyone", &[]);
         let res = execute(deps.as_mut(), conclude_env.clone(), info, conclude_msg).unwrap();
-        
+
         assert!(res.messages.len() > 0);
         assert!(res.attributes.iter().any(|attr| attr.key == "tokens_sold"));
-        assert!(res.attributes.iter().any(|attr| attr.key == "total_payment"));
+        assert!(res
+            .attributes
+            .iter()
+            .any(|attr| attr.key == "total_payment"));
     }
 
     #[test]
     fn test_conclude_deal_min_cap_not_met() {
         let mut deps = mock_dependencies();
         setup_contract(deps.as_mut());
-        
+
         // Setup: Create a deal
         let start_time = 1000u64;
         let env = mock_env_at_time(start_time);
-        
+
         let total_amount = Uint128::new(1000000u128);
         let min_cap = Uint128::new(500000u128);
         let platform_fee = total_amount.multiply_ratio(PLATFORM_FEE_PERCENTAGE as u128, 10000u128);
         let create_msg = create_test_deal_msg(start_time);
-        
+
         let info = mock_info("seller", &coins(platform_fee.u128(), MOCK_PAYMENT_DENOM));
         execute(deps.as_mut(), env.clone(), info, create_msg).unwrap();
 
@@ -281,15 +300,16 @@ mod tests {
         let conclude_msg = ExecuteMsg::ConcludeDeal { deal_id: 1 };
         let info = mock_info("anyone", &[]);
         let res = execute(
-            deps.as_mut(), 
-            mock_env_at_time(conclude_time), 
-            info, 
-            conclude_msg
-        ).unwrap();
+            deps.as_mut(),
+            mock_env_at_time(conclude_time),
+            info,
+            conclude_msg,
+        )
+        .unwrap();
 
         // Verify response
         assert!(res.messages.len() == 2); // Should have refund messages for both bidders
-        
+
         // Check refund messages
         let expected_refunds = vec![
             SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
@@ -307,9 +327,18 @@ mod tests {
         }
 
         // Verify attributes
-        assert!(res.attributes.iter().any(|attr| attr.key == "method" && attr.value == "conclude_deal_refund"));
-        assert!(res.attributes.iter().any(|attr| attr.key == "reason" && attr.value == "min_cap_not_met"));
-        assert!(res.attributes.iter().any(|attr| attr.key == "total_refunded" && attr.value == "350000"));
+        assert!(res
+            .attributes
+            .iter()
+            .any(|attr| attr.key == "method" && attr.value == "conclude_deal_refund"));
+        assert!(res
+            .attributes
+            .iter()
+            .any(|attr| attr.key == "reason" && attr.value == "min_cap_not_met"));
+        assert!(res
+            .attributes
+            .iter()
+            .any(|attr| attr.key == "total_refunded" && attr.value == "350000"));
 
         // Verify deal is marked as concluded
         let deal = DEALS.load(deps.as_ref().storage, 1).unwrap();
@@ -319,26 +348,33 @@ mod tests {
         let conclude_msg = ExecuteMsg::ConcludeDeal { deal_id: 1 };
         let info = mock_info("anyone", &[]);
         let err = execute(
-            deps.as_mut(), 
-            mock_env_at_time(conclude_time), 
-            info, 
-            conclude_msg
-        ).unwrap_err();
+            deps.as_mut(),
+            mock_env_at_time(conclude_time),
+            info,
+            conclude_msg,
+        )
+        .unwrap_err();
         assert!(matches!(err, ContractError::DealAlreadyConcluded {}));
 
         // Verify bids were not removed (optional, depending on your contract's behavior)
-        assert!(BIDS.may_load(deps.as_ref().storage, (1, &Addr::unchecked("bidder1"))).unwrap().is_some());
-        assert!(BIDS.may_load(deps.as_ref().storage, (1, &Addr::unchecked("bidder2"))).unwrap().is_some());
+        assert!(BIDS
+            .may_load(deps.as_ref().storage, (1, &Addr::unchecked("bidder1")))
+            .unwrap()
+            .is_some());
+        assert!(BIDS
+            .may_load(deps.as_ref().storage, (1, &Addr::unchecked("bidder2")))
+            .unwrap()
+            .is_some());
     }
 
     #[test]
     fn test_validation_errors() {
         let mut deps = mock_dependencies();
         setup_contract(deps.as_mut());
-        
+
         let current_time = 1000u64;
         let env = mock_env_at_time(current_time);
-        
+
         let msg = ExecuteMsg::CreateDeal {
             sell_token: MOCK_SELL_TOKEN.to_string(),
             total_amount: Uint128::new(1000000u128),
