@@ -1,0 +1,23 @@
+name: Contract CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: wasm32-unknown-unknown
+        override: true
+    - name: Run tests
+      run: cargo test --verbose
+    - name: Build WASM
+      run: cargo build --release --target wasm32-unknown-unknown
