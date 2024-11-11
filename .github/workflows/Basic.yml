@@ -24,7 +24,8 @@ jobs:
       - name: Compile WASM contract
         uses: actions-rs/cargo@v1
         with:
-          command: build --release --target wasm32-unknown-unknown
+          command: build
+          args:  --release --target wasm32-unknown-unknown
         env:
           RUSTFLAGS: "-C link-arg=-s"
 
@@ -58,8 +59,8 @@ jobs:
       - name: Generate Schema
         uses: actions-rs/cargo@v1
         with:
-          command: run --example schema 
-          args: --locked
+          command: run
+          args:  --example schema
 
       - name: Schema Changes
         # fails if any changes not committed
