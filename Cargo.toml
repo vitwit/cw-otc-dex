@@ -52,3 +52,4 @@ thiserror = "1.0.49"
 
 [dev-dependencies]
 cw-multi-test = "0.20.0"
+cw20-base = "1.1.1"

@@ -9,33 +9,51 @@ pub enum ContractError {
     #[error("{0}")]
     Overflow(#[from] OverflowError),
 
-    #[error("Unauthorized")]
-    Unauthorized {},
-
     #[error("Deal not found")]
     DealNotFound {},
 
     #[error("Bid not found")]
     BidNotFound {},
 
-    #[error("Deal already concluded")]
-    DealAlreadyConcluded {},
-
-    #[error("Invalid time parameters: {reason}")]
+    /// Error for invalid time parameters
+    #[error("Invalid Time Parameters: {reason}")]
     InvalidTimeParameters { reason: String },
 
-    #[error("Invalid bid amount: {reason}")]
-    InvalidBidAmount { reason: String },
-
-    #[error("Insufficient platform fee. Required: {required}, provided: {provided}")]
+    /// Error for insufficient platform fee provided by the seller
+    #[error("Insufficient Platform Fee: required {required}, provided {provided}")]
     InsufficientPlatformFee { required: u128, provided: u128 },
 
-    #[error("Bidding has not started")]
+    /// Error when bidding has not started yet
+    #[error("Bidding has not started yet")]
     BiddingNotStarted {},
 
+    /// Error when bidding has already ended
     #[error("Bidding has ended")]
     BiddingEnded {},
 
-    #[error("Conclusion time not reached")]
+    #[error("Invalid denomination: {reason}")]
+    InvalidDenom { reason: String },
+
+    #[error("No bid payment provided")]
+    NoBidPayment {},
+
+    /// Error for invalid bid amount or parameters
+    #[error("Invalid Bid Amount: {reason}")]
+    InvalidBidAmount { reason: String },
+
+    /// Error when conclusion time has not been reached yet
+    #[error("Conclusion time has not been reached")]
     ConclusionTimeNotReached {},
+
+    /// Error when attempting to conclude a deal that is already concluded
+    #[error("Deal has already been concluded")]
+    DealAlreadyConcluded {},
+
+    /// Error when a bid already exists for a bidder on a deal
+    #[error("Bid already exists for this bidder")]
+    BidAlreadyExists {},
+
+    /// Error for unauthorized actions
+    #[error("Unauthorized")]
+    Unauthorized {},
 }

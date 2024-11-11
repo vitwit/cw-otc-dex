@@ -10,16 +10,19 @@ pub struct Config {
 #[cw_serde]
 pub struct Deal {
     pub seller: String,
-    pub sell_token: String,
+    pub sell_token: String,      // CW20 token address being sold
+    pub bid_token_denom: String, // Native token denom for bids (e.g., "uusd")
     pub total_amount: Uint128,
     pub min_price: Uint128,
-    pub discount_percentage: u64, // In basis points (100 = 1%)
+    pub discount_percentage: u64,
     pub min_cap: Uint128,
     pub bid_start_time: u64,
     pub bid_end_time: u64,
     pub conclude_time: u64,
     pub is_concluded: bool,
     pub total_bids_amount: Uint128,
+    pub total_tokens_sold: Uint128,
+    pub total_payment_received: Uint128,
 }
 
 #[cw_serde]
@@ -37,6 +40,7 @@ pub const DEAL_COUNTER: Item<u64> = Item::new("deal_counter");
 // Maps for storing deals and bids
 pub const DEALS: Map<u64, Deal> = Map::new("deals");
 pub const BIDS: Map<(u64, &Addr), Bid> = Map::new("bids");
+pub const BID_COUNTER: Map<(u64, &Addr), u64> = Map::new("bid_counter");
 
 // Optional indexes for more efficient queries
 pub const SELLER_DEALS: Map<(&Addr, u64), u64> = Map::new("seller_deals");
