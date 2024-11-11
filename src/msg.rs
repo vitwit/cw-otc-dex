@@ -17,8 +17,10 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     /// Creates a new OTC deal
     CreateDeal {
-        /// Address of the token being sold
+        /// Denom of the token being sold
         sell_token: String,
+        /// Denom of the token being accepted for purchase
+        bid_token_denom: String,
         /// Total amount of tokens to sell
         total_amount: Uint128,
         /// Minimum price per token

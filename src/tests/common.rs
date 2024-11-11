@@ -1,17 +1,18 @@
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{coins, Addr, BankMsg, CosmosMsg, DepsMut, Env, SubMsg, Timestamp, Uint128};
+use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+use cosmwasm_std::{coins, Addr, BankMsg, CosmosMsg, DepsMut, Env, SubMsg, Timestamp, Uint128};
 
-    use cw_otc_dex::contract::{execute, execute_conclude_deal, instantiate};
-    use cw_otc_dex::error::ContractError;
-    use cw_otc_dex::msg::{ExecuteMsg, InstantiateMsg};
-    use cw_otc_dex::state::{Bid, Config, Deal, BIDS, CONFIG, DEALS, DEAL_COUNTER};
+use crate::contract::{execute, instantiate};
+use crate::error::ContractError;
+use crate::msg::{ExecuteMsg, InstantiateMsg};
+use crate::state::{BIDS, DEALS};
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
 
     const PLATFORM_FEE_PERCENTAGE: u64 = 100; // 1%
     const MOCK_SELL_TOKEN: &str = "token";
-    const MOCK_PAYMENT_DENOM: &str = "uusd";
+    const MOCK_PAYMENT_DENOM: &str = "uusdc";
 
     // Helper function to create mock environment with specified time
     fn mock_env_at_time(timestamp: u64) -> Env {
@@ -24,6 +25,7 @@ mod tests {
     fn create_test_deal_msg(start_time: u64) -> ExecuteMsg {
         ExecuteMsg::CreateDeal {
             sell_token: MOCK_SELL_TOKEN.to_string(),
+            bid_token_denom: "uusdc".to_string(),
             total_amount: Uint128::new(1000000u128),
             min_price: Uint128::new(1u128),
             discount_percentage: 1000, // 10%
@@ -101,16 +103,17 @@ mod tests {
         execute(deps.as_mut(), env.clone(), info, create_msg).unwrap();
 
         // Move to bidding period
-        let mut bid_env = mock_env_at_time(start_time + 1500); // During bidding period
+        let bid_env = mock_env_at_time(start_time + 1500); // During bidding period
+        let bid_amount = Uint128::new(100000u128);
 
         let bid_msg = ExecuteMsg::PlaceBid {
             deal_id: 1,
-            amount: Uint128::new(100000u128),
+            amount: bid_amount,
             discount_percentage: 500,
             max_price: Some(Uint128::new(95000u128)),
         };
 
-        let info = mock_info("bidder1", &[]);
+        let info = mock_info("bidder1", &coins(bid_amount.u128(), MOCK_PAYMENT_DENOM));
         let res = execute(deps.as_mut(), bid_env.clone(), info, bid_msg).unwrap();
         assert_eq!(res.attributes.len(), 4);
 
@@ -138,19 +141,21 @@ mod tests {
         execute(deps.as_mut(), env.clone(), info, create_msg).unwrap();
 
         // Move to bidding period
-        let mut bid_env = mock_env_at_time(start_time + 1500);
+        let bid_env = mock_env_at_time(start_time + 1500);
+        let bid_amount = Uint128::new(100000u128);
 
         // Place initial bid
         let bid_msg = ExecuteMsg::PlaceBid {
             deal_id: 1,
-            amount: Uint128::new(100000u128),
+            amount: bid_amount,
             discount_percentage: 500,
             max_price: Some(Uint128::new(95000u128)),
         };
-        let info = mock_info("bidder1", &[]);
+        let info = mock_info("bidder1", &coins(bid_amount.u128(), MOCK_PAYMENT_DENOM));
         execute(deps.as_mut(), bid_env.clone(), info.clone(), bid_msg).unwrap();
 
         // Test bid update
+        let bid_amount = Uint128::new(150000u128);
         let update_msg = ExecuteMsg::UpdateBid {
             deal_id: 1,
             new_amount: Uint128::new(150000u128),
@@ -158,6 +163,7 @@ mod tests {
             new_max_price: Some(Uint128::new(140000u128)),
         };
 
+        let info = mock_info("bidder1", &coins(bid_amount.u128(), MOCK_PAYMENT_DENOM));
         let res = execute(deps.as_mut(), bid_env.clone(), info, update_msg).unwrap();
         assert_eq!(res.attributes.len(), 3);
 
@@ -168,6 +174,7 @@ mod tests {
         assert_eq!(bid.discount_percentage, 600);
     }
 
+    #[test]
     fn test_conclude_deal() {
         let mut deps = mock_dependencies();
         setup_contract(deps.as_mut());
@@ -183,17 +190,18 @@ mod tests {
         let info = mock_info("seller", &coins(platform_fee.u128(), MOCK_PAYMENT_DENOM));
         execute(deps.as_mut(), env.clone(), info, create_msg).unwrap();
 
-        // Move to bidding period
-        let bid_env = mock_env_at_time(start_time + 1500);
-
         // Add some bids (but below min_cap)
+        let bid_env = mock_env_at_time(start_time + 1500);
+        let bid_amount = Uint128::new(400000u128);
+
         let bid_msg = ExecuteMsg::PlaceBid {
             deal_id: 1,
-            amount: Uint128::new(400000u128),
+            amount: bid_amount,
             discount_percentage: 500,
             max_price: None,
         };
-        let info = mock_info("bidder1", &[]);
+
+        let info = mock_info("bidder1", &coins(bid_amount.u128(), MOCK_PAYMENT_DENOM));
         execute(deps.as_mut(), bid_env.clone(), info, bid_msg).unwrap();
 
         // Move to conclusion time
@@ -229,17 +237,18 @@ mod tests {
 
         // Move to bidding period and place bid meeting min_cap
         let bid_env = mock_env_at_time(start_time + 1500);
+        let amount = Uint128::new(600000u128);
         let bid_msg = ExecuteMsg::PlaceBid {
             deal_id: 1,
-            amount: Uint128::new(600000u128),
+            amount: amount,
             discount_percentage: 500,
             max_price: None,
         };
-        let info = mock_info("bidder1", &[]);
+        let info = mock_info("bidder1", &coins(amount.u128(), MOCK_PAYMENT_DENOM));
         execute(deps.as_mut(), bid_env.clone(), info, bid_msg).unwrap();
 
         // Test successful conclusion
-        let info = mock_info("anyone", &[]);
+        let info = mock_info("anyone", &coins(amount.u128(), MOCK_PAYMENT_DENOM));
         let res = execute(deps.as_mut(), conclude_env.clone(), info, conclude_msg).unwrap();
 
         assert!(res.messages.len() > 0);
@@ -251,7 +260,7 @@ mod tests {
     }
 
     #[test]
-    fn test_conclude_deal_min_cap_not_met() {
+    pub fn test_conclude_deal_min_cap_not_met() {
         let mut deps = mock_dependencies();
         setup_contract(deps.as_mut());
 
@@ -269,25 +278,26 @@ mod tests {
 
         // Add multiple bids that sum up to less than min_cap
         let bid_env = mock_env_at_time(start_time + 1500); // During bidding period
-
+        let amount = Uint128::new(200000u128);
         // First bid
         let bid_msg1 = ExecuteMsg::PlaceBid {
             deal_id: 1,
-            amount: Uint128::new(200000u128),
+            amount: amount,
             discount_percentage: 500,
             max_price: None,
         };
-        let info = mock_info("bidder1", &[]);
+        let info = mock_info("bidder1", &coins(amount.u128(), MOCK_PAYMENT_DENOM));
         execute(deps.as_mut(), bid_env.clone(), info, bid_msg1).unwrap();
 
+        let amount = Uint128::new(150000u128);
         // Second bid
         let bid_msg2 = ExecuteMsg::PlaceBid {
             deal_id: 1,
-            amount: Uint128::new(150000u128),
+            amount: amount,
             discount_percentage: 600,
             max_price: None,
         };
-        let info = mock_info("bidder2", &[]);
+        let info = mock_info("bidder2", &coins(amount.u128(), MOCK_PAYMENT_DENOM));
         execute(deps.as_mut(), bid_env.clone(), info, bid_msg2).unwrap();
 
         // Verify total bids amount is less than min_cap
@@ -377,6 +387,7 @@ mod tests {
 
         let msg = ExecuteMsg::CreateDeal {
             sell_token: MOCK_SELL_TOKEN.to_string(),
+            bid_token_denom: "uusdc".to_string(),
             total_amount: Uint128::new(1000000u128),
             min_price: Uint128::new(1u128),
             discount_percentage: 11000, // Invalid: > 100%

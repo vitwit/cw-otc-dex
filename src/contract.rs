@@ -1,17 +1,15 @@
 use crate::error::ContractError;
-use crate::helpers::{
-    calculate_platform_fee, create_payment_msg, create_token_transfer_msg, get_sorted_bids,
-    validate_deal_times,
-};
+use crate::helpers::{calculate_platform_fee, get_sorted_bids, validate_deal_times};
 use crate::msg::{ExecuteMsg, InstantiateMsg};
 use crate::state::{Bid, Config, Deal, BIDS, CONFIG, DEALS, DEAL_COUNTER};
 use cosmwasm_std::Addr;
 use cosmwasm_std::StdError;
 use cosmwasm_std::{
-    entry_point, to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Order, Response,
-    StdResult, Storage, Uint128,
+    entry_point, to_binary, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
+    Order, Response, StdResult, Storage, Uint128,
 };
 use cw2::set_contract_version;
+use cw20::Cw20ExecuteMsg;
 
 use crate::msg::{BidResponse, DealResponse, DealStatsResponse, DealsResponse, QueryMsg};
 use cw_storage_plus::Bound;
@@ -60,6 +58,7 @@ pub fn execute(
     match msg {
         ExecuteMsg::CreateDeal {
             sell_token,
+            bid_token_denom,
             total_amount,
             min_price,
             discount_percentage,
@@ -72,6 +71,7 @@ pub fn execute(
             env,
             info,
             sell_token,
+            bid_token_denom,
             total_amount,
             min_price,
             discount_percentage,
@@ -119,6 +119,7 @@ pub fn execute_create_deal(
     env: Env,
     info: MessageInfo,
     sell_token: String,
+    bid_token_denom: String,
     total_amount: Uint128,
     min_price: Uint128,
     discount_percentage: u64,
@@ -142,6 +143,19 @@ pub fn execute_create_deal(
         });
     }
 
+    if min_price.is_zero() {
+        return Err(ContractError::InvalidTimeParameters {
+            reason: "MinPrice must not be zero".to_string(),
+        });
+    }
+
+    // Validate bid token denomination
+    if bid_token_denom.is_empty() {
+        return Err(ContractError::InvalidDenom {
+            reason: "Bid token denomination cannot be empty".to_string(),
+        });
+    }
+
     // Calculate and validate platform fee
     let config = CONFIG.load(deps.storage)?;
     let platform_fee = calculate_platform_fee(total_amount, config.platform_fee_percentage)?;
@@ -150,7 +164,7 @@ pub fn execute_create_deal(
     let provided_fee = info
         .funds
         .iter()
-        .find(|c| c.denom == "uusd") // Replace with your desired denomination
+        .find(|c| c.denom == bid_token_denom)
         .map(|c| c.amount)
         .unwrap_or_default();
 
@@ -168,6 +182,7 @@ pub fn execute_create_deal(
     let deal = Deal {
         seller: info.sender.to_string(),
         sell_token,
+        bid_token_denom,
         total_amount,
         min_price,
         discount_percentage,
@@ -177,6 +192,8 @@ pub fn execute_create_deal(
         conclude_time,
         is_concluded: false,
         total_bids_amount: Uint128::zero(),
+        total_tokens_sold: Uint128::zero(),
+        total_payment_received: Uint128::zero(),
     };
 
     DEALS.save(deps.storage, deal_id, &deal)?;
@@ -212,6 +229,22 @@ pub fn execute_place_bid(
     if amount.is_zero() {
         return Err(ContractError::InvalidBidAmount {
             reason: "Bid amount must be greater than zero".to_string(),
+        });
+    }
+
+    // Validate bid payment
+    let payment = info
+        .funds
+        .iter()
+        .find(|c| c.denom == deal.bid_token_denom)
+        .ok_or(ContractError::NoBidPayment {})?;
+
+    if payment.amount != amount {
+        return Err(ContractError::InvalidBidAmount {
+            reason: format!(
+                "Bid amount {} does not match sent payment {}",
+                amount, payment.amount
+            ),
         });
     }
 
@@ -263,8 +296,33 @@ pub fn execute_update_bid(
         return Err(ContractError::BiddingEnded {});
     }
 
+    // Validate new bid payment
+    let payment = info
+        .funds
+        .iter()
+        .find(|c| c.denom == deal.bid_token_denom)
+        .ok_or(ContractError::NoBidPayment {})?;
+
+    if payment.amount != new_amount {
+        return Err(ContractError::InvalidBidAmount {
+            reason: format!(
+                "New bid amount {} does not match sent payment {}",
+                new_amount, payment.amount
+            ),
+        });
+    }
+
     // Load existing bid
     let old_bid = BIDS.load(deps.storage, (deal_id, &info.sender))?;
+
+    // Create refund message for old bid
+    let refund_msg = BankMsg::Send {
+        to_address: info.sender.to_string(),
+        amount: vec![Coin {
+            denom: deal.bid_token_denom.clone(),
+            amount: old_bid.amount,
+        }],
+    };
 
     // Update total bids amount
     let amount_diff = new_amount.checked_sub(old_bid.amount)?;
@@ -284,6 +342,7 @@ pub fn execute_update_bid(
     BIDS.save(deps.storage, (deal_id, &info.sender), &new_bid)?;
 
     Ok(Response::new()
+        .add_message(refund_msg)
         .add_attribute("method", "update_bid")
         .add_attribute("deal_id", deal_id.to_string())
         .add_attribute("bidder", info.sender))
@@ -307,6 +366,15 @@ pub fn execute_withdraw_bid(
     let bid = BIDS.load(deps.storage, (deal_id, &info.sender))?;
     BIDS.remove(deps.storage, (deal_id, &info.sender));
 
+    // Create refund message
+    let refund_msg = BankMsg::Send {
+        to_address: info.sender.to_string(),
+        amount: vec![Coin {
+            denom: deal.bid_token_denom,
+            amount: bid.amount,
+        }],
+    };
+
     // Update total bids amount
     DEALS.update(deps.storage, deal_id, |deal_opt| -> StdResult<_> {
         let mut deal = deal_opt.unwrap();
@@ -315,6 +383,7 @@ pub fn execute_withdraw_bid(
     })?;
 
     Ok(Response::new()
+        .add_message(refund_msg)
         .add_attribute("method", "withdraw_bid")
         .add_attribute("deal_id", deal_id.to_string())
         .add_attribute("bidder", info.sender))
@@ -348,48 +417,166 @@ pub fn execute_conclude_deal(
     _info: MessageInfo,
     deal_id: u64,
 ) -> Result<Response, ContractError> {
-    // Load deal data
     let mut deal = DEALS.load(deps.storage, deal_id)?;
 
-    // Validation: Check timing and conclusion status
-    if env.block.time.seconds() < deal.conclude_time {
-        return Err(ContractError::ConclusionTimeNotReached {});
-    }
+    println!("deal min pice {}", deal.min_price);
+
+    // Validate deal status
     if deal.is_concluded {
         return Err(ContractError::DealAlreadyConcluded {});
     }
 
-    // Case 1: Minimum cap not met - refund all bidders
-    if deal.total_bids_amount < deal.min_cap {
-        let refund_messages = process_failed_deal(deps.storage, deal_id)?;
+    let current_time = env.block.time.seconds();
+    if current_time < deal.conclude_time {
+        return Err(ContractError::ConclusionTimeNotReached {});
+    }
 
-        // Mark deal as concluded
+    let mut response = Response::new();
+
+    // Check if minimum cap is met
+    if deal.total_bids_amount < deal.min_cap {
+        // Process refunds for failed deal
+        let bids = BIDS.prefix(deal_id);
+        for result in bids.range(deps.storage, None, None, Order::Ascending) {
+            let (_, bid) = result?;
+            let bidder_addr = deps.api.addr_validate(&bid.bidder)?;
+
+            // Create refund message for the bid amount
+            let refund_msg = BankMsg::Send {
+                to_address: bidder_addr.to_string(),
+                amount: vec![Coin {
+                    denom: deal.bid_token_denom.clone(),
+                    amount: bid.amount,
+                }],
+            };
+            response = response.add_message(refund_msg);
+        }
+
+        // Mark deal as concluded and save
         deal.is_concluded = true;
         DEALS.save(deps.storage, deal_id, &deal)?;
 
-        return Ok(Response::new()
-            .add_messages(refund_messages)
+        return Ok(response
             .add_attribute("method", "conclude_deal_refund")
-            .add_attribute("deal_id", deal_id.to_string())
             .add_attribute("reason", "min_cap_not_met")
-            .add_attribute("total_refunded", deal.total_bids_amount));
+            .add_attribute("total_refunded", deal.total_bids_amount.to_string()));
     }
 
-    // Case 2: Process successful deal
-    let (messages, stats) = process_successful_deal(deps.storage, &deal, deal_id)?;
+    // Process successful deal
+    let mut total_tokens_sold = Uint128::zero();
+    let mut total_payment_received = Uint128::zero();
+    let seller_addr = deps.api.addr_validate(&deal.seller)?;
 
-    // Mark deal as concluded
+    // Get sorted bids (by discount percentage, lowest first)
+    let sorted_bids = get_sorted_bids(deps.storage, deal_id)?;
+    let mut remaining_tokens = deal.total_amount;
+
+    // Process each bid
+    for (bidder_addr, bid) in sorted_bids {
+        if remaining_tokens.is_zero() {
+            // No more tokens available, refund remaining bids
+            let refund_msg = BankMsg::Send {
+                to_address: bidder_addr.to_string(),
+                amount: vec![Coin {
+                    denom: deal.bid_token_denom.clone(),
+                    amount: bid.amount,
+                }],
+            };
+            response = response.add_message(refund_msg);
+            continue;
+        }
+
+        // Calculate the effective price after discount
+        let effective_discount = deal.discount_percentage.min(bid.discount_percentage);
+
+        println!("deal effective_discount {}", effective_discount);
+
+        let price_per_token = deal
+            .min_price
+            .multiply_ratio(10_000u128 - effective_discount as u128, 10_000u128);
+
+        // Check if price exceeds bidder's max price
+        if let Some(max_price) = bid.max_price {
+            if price_per_token > max_price {
+                // Price too high, refund this bid
+                let refund_msg = BankMsg::Send {
+                    to_address: bidder_addr.to_string(),
+                    amount: vec![Coin {
+                        denom: deal.bid_token_denom.clone(),
+                        amount: bid.amount,
+                    }],
+                };
+                response = response.add_message(refund_msg);
+                continue;
+            }
+        }
+
+        println!("deal price_per_token {}", price_per_token);
+
+        // Calculate tokens to allocate
+        let tokens_to_transfer = std::cmp::min(
+            bid.amount.multiply_ratio(Uint128::new(1), price_per_token),
+            remaining_tokens,
+        );
+        let payment_amount = tokens_to_transfer.multiply_ratio(price_per_token, Uint128::new(1));
+
+        if tokens_to_transfer.is_zero() {
+            // Skip if no tokens would be transferred
+            continue;
+        }
+
+        // Calculate refund if partial fill
+        let refund_amount = bid.amount.checked_sub(payment_amount)?;
+        if !refund_amount.is_zero() {
+            let refund_msg = BankMsg::Send {
+                to_address: bidder_addr.to_string(),
+                amount: vec![Coin {
+                    denom: deal.bid_token_denom.clone(),
+                    amount: refund_amount,
+                }],
+            };
+            response = response.add_message(refund_msg);
+        }
+
+        // Transfer tokens to bidder
+        let transfer_msg = CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
+            contract_addr: deal.sell_token.clone(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: bidder_addr.to_string(),
+                amount: tokens_to_transfer,
+            })?,
+            funds: vec![],
+        });
+        response = response.add_message(transfer_msg);
+
+        // Update totals
+        total_tokens_sold += tokens_to_transfer;
+        total_payment_received += payment_amount;
+        remaining_tokens = remaining_tokens.checked_sub(tokens_to_transfer)?;
+    }
+
+    // Transfer total payment to seller
+    let seller_payment_msg = BankMsg::Send {
+        to_address: seller_addr.to_string(),
+        amount: vec![Coin {
+            denom: deal.bid_token_denom.clone(),
+            amount: total_payment_received,
+        }],
+    };
+    response = response.add_message(seller_payment_msg);
+
+    // Update deal state
     deal.is_concluded = true;
+    deal.total_tokens_sold = total_tokens_sold;
+    deal.total_payment_received = total_payment_received;
     DEALS.save(deps.storage, deal_id, &deal)?;
 
-    Ok(Response::new()
-        .add_messages(messages)
+    Ok(response
         .add_attribute("method", "conclude_deal")
         .add_attribute("deal_id", deal_id.to_string())
-        .add_attribute("tokens_sold", stats.tokens_sold)
-        .add_attribute("total_payment", stats.total_payment)
-        .add_attribute("successful_bids", stats.successful_bids.to_string())
-        .add_attribute("refunded_bids", stats.refunded_bids.to_string()))
+        .add_attribute("tokens_sold", total_tokens_sold)
+        .add_attribute("total_payment", total_payment_received)
+        .add_attribute("remaining_tokens", remaining_tokens))
 }
 
 /// Helper struct to track deal conclusion statistics
@@ -398,95 +585,6 @@ struct DealStats {
     total_payment: Uint128,
     successful_bids: u32,
     refunded_bids: u32,
-}
-
-/// Processes a failed deal by refunding all bidders
-fn process_failed_deal(
-    storage: &dyn Storage,
-    deal_id: u64,
-) -> Result<Vec<CosmosMsg>, ContractError> {
-    let mut messages: Vec<CosmosMsg> = vec![];
-    let bids = get_sorted_bids(storage, deal_id)?;
-
-    for (bidder, bid) in bids {
-        messages.push(create_payment_msg(
-            bidder, bid.amount, "uusd", // Replace with actual denom
-        ));
-    }
-
-    Ok(messages)
-}
-
-/// Processes a successful deal by allocating tokens and handling payments
-fn process_successful_deal(
-    storage: &dyn Storage,
-    deal: &Deal,
-    deal_id: u64,
-) -> Result<(Vec<CosmosMsg>, DealStats), ContractError> {
-    let mut messages: Vec<CosmosMsg> = vec![];
-    let mut stats = DealStats {
-        tokens_sold: Uint128::zero(),
-        total_payment: Uint128::zero(),
-        successful_bids: 0,
-        refunded_bids: 0,
-    };
-
-    let mut remaining_tokens = deal.total_amount;
-    let bids = get_sorted_bids(storage, deal_id)?;
-
-    // Process bids from lowest to highest discount
-    for (bidder, bid) in bids {
-        if remaining_tokens.is_zero() {
-            // Refund remaining bids
-            messages.push(create_payment_msg(bidder, bid.amount, "uusd"));
-            stats.refunded_bids += 1;
-            continue;
-        }
-
-        // Calculate token allocation
-        let tokens_to_receive = std::cmp::min(bid.amount, remaining_tokens);
-
-        // Calculate final price with discount
-        let base_price = tokens_to_receive.multiply_ratio(deal.min_price, Uint128::new(1u128));
-        let discount = base_price.multiply_ratio(bid.discount_percentage, 100u128);
-        let final_price = base_price.checked_sub(discount)?;
-
-        // Check if price meets buyer's max price constraint
-        if let Some(max_price) = bid.max_price {
-            if final_price > max_price {
-                messages.push(create_payment_msg(bidder, bid.amount, "uusd"));
-                stats.refunded_bids += 1;
-                continue;
-            }
-        }
-
-        // Process successful bid
-
-        // 1. Transfer tokens to buyer
-        messages.push(create_token_transfer_msg(
-            deal.sell_token.clone(),
-            bidder.clone(),
-            tokens_to_receive,
-        )?);
-
-        // 2. Transfer payment to seller
-        messages.push(create_payment_msg(deal.seller.clone(), final_price, "uusd"));
-
-        // Update running totals
-        remaining_tokens = remaining_tokens.checked_sub(tokens_to_receive)?;
-        stats.tokens_sold += tokens_to_receive;
-        stats.total_payment += final_price;
-        stats.successful_bids += 1;
-    }
-
-    // Validate all tokens are accounted for
-    if stats.tokens_sold + remaining_tokens != deal.total_amount {
-        return Err(ContractError::InvalidBidAmount {
-            reason: "Token allocation mismatch".to_string(),
-        });
-    }
-
-    Ok((messages, stats))
 }
 
 const DEFAULT_LIMIT: u32 = 10;
