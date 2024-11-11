@@ -1,8 +1,5 @@
 use crate::error::ContractError;
-use crate::helpers::{
-    calculate_platform_fee, get_sorted_bids,
-    validate_deal_times,
-};
+use crate::helpers::{calculate_platform_fee, get_sorted_bids, validate_deal_times};
 use crate::msg::{ExecuteMsg, InstantiateMsg};
 use crate::state::{Bid, Config, Deal, BIDS, CONFIG, DEALS, DEAL_COUNTER};
 use cosmwasm_std::Addr;
